@@ -2,6 +2,7 @@
 #define TEST_MODULE_H
 
 #include <openflow/openflow.h>
+#include <pcap.h>
 
 struct test_module;
 
@@ -96,21 +97,25 @@ typedef struct test_module
 // List of interfaces exposed from oflops to test_modules
 
 
-// Send an openflow message from the module to the switch along the control channel
+/// Send an openflow message from the module to the switch along the control channel
 int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
-// Send an raw message from the module to the switch along the data channel
+/// Send an raw message from the module to the switch along the data channel
 int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len);
 
-// Get the file descriptor of the channel 
+/// Get the file descriptor of the channel 
 int oflops_get_channel_fd(struct oflops_context *ctx, oflops_channel_name ch);
-// Get the file descriptor of the channel 
+/// Get the file descriptor of the channel 
 int oflops_get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch);
 
-// Schedule a time event; arg is passed back to the test_module when the event occurs
-// 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
+/// Schedule a time event; arg is passed back to the test_module when the event occurs
+/// 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
 int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
 
-// Tell the harness this test is over
+/// Lookup the timestamp for this chunk of data
+/// 	works for tcp hdrs and openflow messages
+int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, struct pcap_pkthdr * hdr, oflops_channel_name ofc);
+
+/// Tell the harness this test is over
 int oflops_end_test(struct oflops_context *ctx);
 
 

@@ -6,6 +6,7 @@ struct channel_info;
 
 #include "context.h"
 #include "test_module.h"
+#include "pcap_track.h"
 
 typedef struct channel_info {
 	char * dev;
@@ -14,6 +15,7 @@ typedef struct channel_info {
 	int raw_sock;	// raw ethernet access fd
 	int sock;	// UDP socket
 	int ifindex;	// index of this device
+	struct ptrack_list * timestamps;
 } channel_info;
 
 int channel_info_init(struct channel_info * channel, char * dev);

@@ -1,4 +1,5 @@
 #include "config.h"
+#include <assert.h>
 #include <pcap.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,7 @@
 
 /***********************************************************************
  * hook for the test module to signal that the test is done
- */
+ **/
 
 int oflops_end_test(struct oflops_context *ctx)
 {
@@ -32,7 +33,7 @@ int oflops_end_test(struct oflops_context *ctx)
 /**********************************************************************
  * hook for the test module to get access to a raw file descriptor bound
  * 	to the data channel's device
- */
+ **/
 
 int oflops_get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
@@ -57,7 +58,7 @@ int oflops_get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name c
 /**********************************************************************
  * hook for the test module to get access to a udp file descriptor bound
  * 	to the data channel's device
- */
+ **/
 int oflops_get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
@@ -80,7 +81,7 @@ int oflops_get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
 
 /***************************************************************************
  * hook for the test module to schedule an timer_event to be called back into the module
- */
+ **/
 
 int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
 {
@@ -94,7 +95,7 @@ int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, 
  * 	FIXME: assert()'s that the message doesn't block -- if this is a problem
  * 	we need to implement some buffering and mod the select() call to open for
  * 	writing
- */
+ **/
 int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 {
 	int len = ntohs(ofph->length);
@@ -114,7 +115,7 @@ int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 /********************************************************************************
  * hook for the test module to send a raw message out a certain data channel
  * 	here, "raw" means with ethernet header
- */
+ **/
 
 int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len)
 {
@@ -141,3 +142,15 @@ int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, voi
 		perror("oflops_send_raw_mesg(): sendto()");
 	return send_result;
 }
+
+/**************************************************************************************
+ * hook to get high accuracy pcap timestamp for this data
+ * @return zero if not found, one if found
+ **/
+int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, struct pcap_pkthdr * hdr, oflops_channel_name ofc)
+{
+	channel_info * ch  = &ctx->channels[ofc];
+	assert(ch->timestamps);
+	return ptrack_lookup(ch->timestamps,data,len,hdr);
+}
+
