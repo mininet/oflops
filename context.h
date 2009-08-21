@@ -31,6 +31,7 @@ typedef struct oflops_context
 
 	int control_fd;
 	channel_info channels[3];	// control, send, recv
+	int should_end;
 } oflops_context;
 
 oflops_context * oflops_default_context(void);

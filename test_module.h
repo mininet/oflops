@@ -49,7 +49,7 @@ typedef struct test_module
 	//
 	// DEFAULT: NOOP
 	//
-	// return 0 if success or -1 to signal module is done
+	// return 0 if success or -1 on error
 	int (*start)(struct oflops_context * ctx, int send_fd, int recv_fd);
 
 	// Tell the test module that pcap found a packet on 
@@ -58,7 +58,7 @@ typedef struct test_module
 	// 	if this module does not want pcap events, return NULL
 	// 	for get_pcap_filter()
 	//
-	// return 0 if success or -1 to signal module is done
+	// return 0 if success or -1 on error
 	int (*pcap_event)(pcap_event * pe);
 
 	// Tell the test module that an openflow mesg came
@@ -66,7 +66,7 @@ typedef struct test_module
 	//
 	// DEFAULT: ignore this type of openflow message
 	//
-	// return 0 if success or -1 to signal module is done
+	// return 0 if success or -1 on error
 	int (*of_event_packet_in)(struct ofp_packet_in * ofph);
 	int (*of_event_flow_removed)(struct ofp_flow_removed * ofph);
 	int (*of_event_port_status)(struct ofp_port_status * ofph);
@@ -76,8 +76,8 @@ typedef struct test_module
 	//
 	// DEFAULT: ignore timer events
 	//
-	// return 0 if success or -1 to signal module is done
-	int (*timer_event)(timer_event * te);
+	// return 0 if success or -1 on error
+	int (*timer_event)(struct timer_event * te);
 	
 } test_module;
 
@@ -89,6 +89,9 @@ int send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
 int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
+
+// Tell the harness this test is over
+int end_test(struct oflops_context *ctx);
 
 
 
