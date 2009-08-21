@@ -14,7 +14,7 @@
 int main(int argc, char * argv[])
 {
 	int i;
-	oflops_ctx * ctx = oflops_default_context();
+	oflops_context * ctx = oflops_default_context();
 	parse_args(ctx, argc, argv);
 
 	setup_control_channel(ctx);

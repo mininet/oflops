@@ -5,14 +5,18 @@
 
 struct test_module;
 
-#include "oflops.h"
-#include "oflops_pcap.h"
-
-enum oflops_channel {
+typedef enum oflops_channel {
 	OFLOPS_CONTROL,		// openflow control channel, e.g., eth0
 	OFLOPS_SEND,		// sending channel, e.g., eth1
 	OFLOPS_RECV		// recving channel, e.g., eth2
-};
+} oflops_channel;
+
+extern char * oflops_channel_names[4];
+
+#include "oflops.h"
+#include "oflops_pcap.h"
+#include "timer_event.h"
+
 
 
 // Any test_module can implement any of the following 
@@ -20,10 +24,12 @@ enum oflops_channel {
 
 typedef struct test_module
 {
-	// Ask module what pcap_filter it wants for this channel
+	// Return the name of the module
 	//
-	// DEFAULT: return NULL --> don't send pcap events on this channel
-	char * (*get_pcap_filter)(oflops_channel ofc);
+	// DEFAULT: use the filename of the module
+	//
+	// str returnned is static; don't free()
+	const char * (*name)(void);
 
 	// Initialize module with the config string
 	//
@@ -31,6 +37,11 @@ typedef struct test_module
 	//
 	// return 0 if success, -1 if fatal error
 	int (*init)(char * config_str);
+
+	// Ask module what pcap_filter it wants for this channel
+	//
+	// DEFAULT: return zero --> don't send pcap events on this channel
+	int (*get_pcap_filter)(oflops_channel ofc, char * filter, int buflen);
 
 	// Tell the module it's time to start its test
 	// 	pass raw sockets for send and recv channels

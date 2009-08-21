@@ -3,6 +3,6 @@
 
 #include "oflops.h"
 
-int parse_args(oflops_context * ctx, int argv, char * argv[]);
+int parse_args(oflops_context * ctx, int argc, char * argv[]);
 
 #endif

@@ -3,18 +3,23 @@ AUTOMAKE_OPTIONS=-Wall -Werror foreign
 
 OFSRC=@openflowsrc@
 
-CFLAGS+=-I$(OFSRC)/include -I$(OFSRC)/lib -Wshadow
-LDFLAGS+=-L$(OFSRC)/lib 
+CFLAGS+=-I$(OFSRC)/include -Wshadow -Werror
+LDFLAGS+=-L$(OFSRC)/lib  -lpcap
 
-LDADD=$(OFSRC)/lib/libopenflow.a -ldl
+LDADD=-ldl
 
 
 bin_PROGRAMS=oflops
 
-oflops_SOURCES= oflops.c \
-	context.h control.h module_run.h oflops.h \
-	oflops_pcap.h test_module.h usage.h 
+oflops_SOURCES= oflops.c oflops.h \
+	utils.h utils.c \
+	context.h context.c \
+	control.h control.c \
+	usage.h usage.c \
+	module_run.h  module_run.c \
+	oflops_pcap.h oflops_pcap.c \
+	test_module.h  test_module.c
 
 
 count: 
-	@wc -l $(flowvisor_SOURCES) $(flowvisor_HEADERS) | sort -n
+	@wc -l $(oflops_SOURCES) | sort -n
