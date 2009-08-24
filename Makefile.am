@@ -1,9 +1,9 @@
-AUTOMAKE_OPTIONS=-Wall -Werror foreign
+AUTOMAKE_OPTIONS=-Wall foreign
 #SUBDIRS = policies
 
 OFSRC=@openflowsrc@
 
-CFLAGS+=-I$(OFSRC)/include -Wshadow -Werror
+CFLAGS+=-I$(OFSRC)/include -Wshadow 
 LDFLAGS+=-L$(OFSRC)/lib  -lpcap
 
 LDADD=-ldl
