@@ -68,7 +68,13 @@ typedef struct test_module
 	//
 	// return 0 if success or -1 on error
 	int (*of_event_packet_in)(struct ofp_packet_in * ofph);
-	int (*of_event_flow_removed)(struct ofp_flow_removed * ofph);
+	#if OFP_VERSION == 0x97
+		int (*of_event_flow_removed)(struct ofp_flow_expired * ofph);
+	#elif OFP_VERSION == 0x98
+		int (*of_event_flow_removed)(struct ofp_flow_removed * ofph);
+	#else
+		#error "Unknown version of openflow"
+	#endif
 	int (*of_event_port_status)(struct ofp_port_status * ofph);
 	int (*of_event_other)(struct ofp_header * ofph);	
 
