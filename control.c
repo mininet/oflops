@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +16,7 @@ int setup_control_channel(oflops_context *ctx)
 	struct sockaddr_in sin;
 	char buf[BUFLEN];
 	unsigned int len;
+	long flags;
 	fprintf(stderr, "Creating server socket...\n");
 	ctx->listen_fd = socket( AF_INET, SOCK_STREAM, 0);
 	if(ctx->listen_fd == -1)
@@ -35,6 +37,10 @@ int setup_control_channel(oflops_context *ctx)
 	inet_ntop(AF_INET,&sin.sin_addr,buf,BUFLEN);
 	fprintf( stderr, "Got connection from %s:%d \n",
 			buf, htons(sin.sin_port));
+	fprintf( stderr, "Setting control channel to non-blocking\n");
+	flags = O_NONBLOCK;
+	if(fcntl(ctx->control_fd, F_SETFL, &flags))
+		perror_and_exit("fcntl(control, O_NONBLOCK)",1);
 	return 0;
 }
 

@@ -13,9 +13,11 @@
 
 
 
-void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel);
-void test_module_loop(oflops_context *ctx, test_module *mod);
-void process_event(oflops_context *ctx, struct pollfd *fd);
+static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch);
+static void test_module_loop(oflops_context *ctx, test_module *mod);
+static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *fd);
+static void process_control_event(oflops_context *ctx, test_module * mod, struct pollfd *fd);
+static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch);
 
 
 /******************************************************
@@ -40,7 +42,7 @@ int run_test_module(oflops_context *ctx, test_module * mod)
  */
 
 
-void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch )
+static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch )
 {
 	char buf[BUFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -103,7 +105,7 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch )
  * 	2) call poll with a min timeout of the next event
  * 	3) dispatch events as appropriate
  */
-void test_module_loop(oflops_context *ctx, test_module *mod)
+static void test_module_loop(oflops_context *ctx, test_module *mod)
 {
 	struct pollfd poll_set[4];
 	int ret;
@@ -143,21 +145,107 @@ void test_module_loop(oflops_context *ctx, test_module *mod)
 		{
 			int i;	
 			for(i=0; i<ret; i++)
-				process_event(ctx, &poll_set[i]);
+				process_event(ctx, mod, &poll_set[i]);
 		}
 	}
 }
 
 /*******************************************************
+ * static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
  * this channel got an event
  * 	figure out what it is, parse it, and send it to
  * 	the test module
  */
 
 
-void process_event(oflops_context *ctx, struct pollfd *fd)
+static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
 {
-	// FIXME
-	abort();
+	// this is inefficient, but ok since there are really only 4 cases
+	if(pfd->fd == ctx->control_fd)
+		process_control_event(ctx, mod, pfd);
+	else if (pfd->fd == ctx->channels[OFLOPS_CONTROL].pcap_fd)
+		process_pcap_event(ctx, mod, pfd,OFLOPS_CONTROL);
+	else if (pfd->fd == ctx->channels[OFLOPS_SEND].pcap_fd)
+		process_pcap_event(ctx, mod, pfd,OFLOPS_SEND);
+	else if (pfd->fd == ctx->channels[OFLOPS_RECV].pcap_fd)
+		process_pcap_event(ctx, mod, pfd,OFLOPS_RECV);
+	else 
+	{
+		fprintf(stderr, "Event on unknown fd %d .. dying", pfd->fd);
+		abort();
+	}
+}
 
+/***********************************************************************************************
+ * static void process_control_event(oflops_context *ctx, test_module * mod, struct pollfd *fd);
+ * 	if POLLIN is set, read an openflow message from the control channel
+ * 	FIXME: handle a control channel reset here
+ */
+static void process_control_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
+{
+	// FIXME: this code assumes that the entire message is in the buffer and thus we don't have to buffer
+	// partial messages	; buffering is a PITA and I'm just asserting around it here
+	char * buf;
+	unsigned int msglen;
+	struct ofp_header ofph;
+	int err;
+
+	assert(pfd->revents & POLLIN);		// FIXME: only know how to handle POLLIN events for now
+	// read just the header from the socket
+	err = read(pfd->fd,&ofph, sizeof(ofph));
+	assert(err == sizeof(ofph));		// FIXME!
+	msglen = ntohs(ofph.length);
+
+	buf = malloc_and_check(msglen);
+	// copy header into place
+	memcpy(buf,&ofph,sizeof(ofph));
+	// read the rest of the msg if any
+	if( msglen > sizeof(ofph))
+	{
+		err = read(pfd->fd, &buf[sizeof(ofph)], msglen - sizeof(ofph));
+		assert(err == (msglen - sizeof(ofph)));	// make sure we got everything
+	}
+
+	switch(ofph.type)
+	{
+		case OFPT_PACKET_IN:
+			mod->of_event_packet_in((struct ofp_packet_in *)buf);
+			break;
+		case OFPT_FLOW_EXPIRED:
+			#if OFP_VERSION == 0x97
+				mod->of_event_flow_removed((struct ofp_flow_expired *)buf);
+			#elif OFP_VERSION == 0x98
+				mod->of_event_flow_removed((struct ofp_flow_removed *)buf);
+			#else
+			#error "Unknown version of openflow"
+			#endif
+			break;
+		case OFPT_PORT_STATUS:
+			mod->of_event_port_status((struct ofp_port_status *)buf);
+			break;
+		default:
+			mod->of_event_other((struct ofp_header * ) buf);
+			break;
+	};
+}
+
+
+/**********************************************************************************************
+ * static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch);
+ * 	front end to oflops_pcap_handler
+ * 		make sure all of the memory is kosher before and after
+ * 		pcap's callback thing has always annoyed me
+ */
+static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch)
+{
+	struct pcap_event_wrapper wrap;
+	int count;
+
+	// read the next packet from the appropriate pcap socket
+	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
+	// dispatch it to the test module
+	mod->pcap_event(wrap.pe, ch);
+	// clean up our mess
+	pcap_event_free(wrap.pe);
+	return;
 }

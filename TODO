@@ -1,0 +1,2 @@
+1) Handle exceptions on control channel (RST, etc.)
+2) Buffer control channel messages in case of partial send
