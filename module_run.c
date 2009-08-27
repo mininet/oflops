@@ -1,5 +1,6 @@
 #include "config.h"
 #include <assert.h>
+#include <dlfcn.h>
 #include <pcap.h>
 #include <poll.h>
 #include <stdio.h>
@@ -248,4 +249,21 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 	// clean up our mess
 	pcap_event_free(wrap.pe);
 	return;
+}
+/*************************************************************************
+ * int load_test_module(oflops_context *ctx, 
+ * 			char * mod_filename, char * initstr);
+ * 	open this module and strip symbols out of it
+ * 	and call init() on it
+ */
+int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
+{
+	void * symbols;
+	test_module * mod;
+	mod = malloc_and_check(sizeof(*mod));
+	bzero(mod,sizeof(*mod));
+
+	// open module for dyn symbols
+	symbols = dlopen(mod_filename,RTLD_NOW);
+	return 1;	// fail for now
 }
