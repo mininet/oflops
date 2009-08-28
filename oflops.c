@@ -29,7 +29,7 @@ int main(int argc, char * argv[])
 	for(i=0;i<ctx->n_tests;i++)
 	{
 		fprintf(stderr, "-----------------------------------------------\n");
-		fprintf(stderr, "------------ TEST %s ----------\n", ctx->tests[i]->name());
+		fprintf(stderr, "------------ TEST %s ----------\n", (*(ctx->tests[i]->name))());
 		fprintf(stderr, "-----------------------------------------------\n");
 		reset_context(ctx);
 		run_test_module(ctx, ctx->tests[i]);

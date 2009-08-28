@@ -44,7 +44,7 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_AWK
 AC_PROG_CPP
-AC_PROG_RANLIB
+AC_PROG_LIBTOOL
 
 
 # Checks for header files.
@@ -57,6 +57,9 @@ AC_HEADER_STDBOOL
 AC_CHECK_FUNCS([strerror])
 
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile \
+		example_modules/Makefile \
+		example_modules/oflops_debug/Makefile \
+		])
 
 AC_OUTPUT

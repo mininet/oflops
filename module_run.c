@@ -8,6 +8,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+
+#include <linux/if_packet.h>
+#include <linux/if_ether.h>
+#include <linux/if_arp.h>
+
 #include "module_run.h"
 #include "module_default.h"
 #include "test_module.h"
@@ -28,11 +35,12 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
  */
 int run_test_module(oflops_context *ctx, test_module * mod)
 {
-	mod->start(ctx);
 
 	setup_channel( ctx, mod, OFLOPS_CONTROL);
 	setup_channel( ctx, mod, OFLOPS_SEND);
 	setup_channel( ctx, mod, OFLOPS_RECV);
+
+	mod->start(ctx);
 
 	test_module_loop(ctx,mod);
 }
@@ -40,6 +48,8 @@ int run_test_module(oflops_context *ctx, test_module * mod)
 
 /****************************************************
  * query module if they want pcap and set it up for them if yes
+ * also create a raw_socket bound to each device if we have the
+ * device set
  */
 
 
@@ -48,10 +58,27 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel 
 	char buf[BUFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program filter;
+	struct ifreq ifr;
 	bpf_u_int32 mask=0, net=0;
 
 	channel_info *ch_info = &ctx->channels[ch];	
 
+	if(ch_info->dev==NULL)
+	{
+		fprintf(stderr,"Channel %s not configured; disabling\n",
+				oflops_channel_names[ch]);
+		return;
+	}
+	// setup raw socket
+	ch_info->raw_sock = socket(AF_PACKET,SOCK_RAW, htons(ETH_P_ALL));
+	if( ch_info->raw_sock == -1)
+		perror_and_exit("raw socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL))",1);
+	// bind to a specific port
+	strncpy(ifr.ifr_name,ch_info->dev,IFNAMSIZ);
+	if( ioctl( ch_info->raw_sock, SIOCGIFINDEX, &ifr)  == -1 )
+		perror_and_exit("ioctl() bind to dev",1);
+
+	// setup pcap filter, if wanted
 	ch_info->want_pcap = mod->get_pcap_filter(ch,buf,BUFLEN);
 	if(!ch_info->want_pcap)
 	{
@@ -96,7 +123,6 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel 
 		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
 		exit(1);
 	}
-
 }
 
 
@@ -265,18 +291,30 @@ int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 
 	// open module for dyn symbols
 	handle = dlopen(mod_filename,RTLD_NOW);
+	if(handle == NULL)
+	{	
+		fprintf(stderr,"Error reading symbols from %s : %s\n",
+				mod_filename, dlerror());
+		return 1;
+	}
 	mod->name = dlsym(handle,"name");
+	mod->start = dlsym(handle,"start");
 	if(!mod->name)
-	{
 		fprintf( stderr, "Module %s does not contain a name() function\n", mod_filename);
+	if(!mod->start)
+		fprintf( stderr, "Module %s does not contain a start() function\n", mod_filename);
+	if(!mod->name || !mod->start)
+	{
 		free(mod);
 		dlclose(handle);
 		return 1;	// fail for now
 	}
 
-#define symbol_fetch(X) mod->X = dlsym(handle, #X);   if(!mod->X) mod->X = default_module_##X
+#define symbol_fetch(X) \
+	mod->X = dlsym(handle, #X);   \
+	if(!mod->X) \
+		mod->X = default_module_##X
 	symbol_fetch(init);
-	symbol_fetch(start);
 	symbol_fetch(get_pcap_filter);
 	symbol_fetch(pcap_event);
 	symbol_fetch(of_event_packet_in);
@@ -291,6 +329,6 @@ int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 		ctx->tests = realloc_and_check(ctx->tests, ctx->max_tests * sizeof(struct test_modules *));
 	}
 	ctx->tests[ctx->n_tests++] = mod;
-	dlclose(handle);
+	mod->symbol_handle=handle;
 	return 0;
 }

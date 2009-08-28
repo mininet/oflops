@@ -84,6 +84,7 @@ typedef struct test_module
 	//
 	// return 0 if success or -1 on error
 	int (*timer_event)(struct timer_event * te);
+	void * symbol_handle;
 	
 } test_module;
 

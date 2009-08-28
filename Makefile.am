@@ -1,15 +1,15 @@
 AUTOMAKE_OPTIONS=-Wall foreign
-#SUBDIRS = policies
 
 OFSRC=@openflowsrc@
 
 CFLAGS+=-I$(OFSRC)/include -Wshadow 
-LDFLAGS+=-L$(OFSRC)/lib  -lpcap
+LDFLAGS+=-L$(OFSRC)/lib 
 
-LDADD=-ldl
+LDADD=-ldl -lpcap -loflops_test
 
 
 bin_PROGRAMS=oflops
+lib_LTLIBRARIES=liboflops_test.la
 
 oflops_SOURCES= oflops.c oflops.h \
 	utils.h utils.c \
@@ -19,9 +19,11 @@ oflops_SOURCES= oflops.c oflops.h \
 	usage.h usage.c \
 	module_run.h  module_run.c \
 	module_default.h  module_default.c \
-	oflops_pcap.h oflops_pcap.c \
-	test_module.h  test_module.c
+	oflops_pcap.h oflops_pcap.c 
 
+liboflops_test_la_SOURCES= test_module.h  test_module.c
+
+SUBDIRS = example_modules
 
 count: 
 	@wc -l $(oflops_SOURCES) | sort -n
