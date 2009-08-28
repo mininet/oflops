@@ -7,7 +7,7 @@
 
 int default_module_init(char *);
 int default_module_get_pcap_filter(oflops_channel ofc, char * filter, int buflen);
-int default_module_start(struct oflops_context * ctx, int send_fd, int recv_fd);
+int default_module_start(struct oflops_context * ctx);
 int default_module_pcap_event(struct pcap_event * pe, oflops_channel ch);
 
 int default_module_of_event_packet_in(struct ofp_packet_in * pktin);

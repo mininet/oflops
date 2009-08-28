@@ -50,7 +50,7 @@ typedef struct test_module
 	// DEFAULT: NOOP
 	//
 	// return 0 if success or -1 on error
-	int (*start)(struct oflops_context * ctx, int send_fd, int recv_fd);
+	int (*start)(struct oflops_context * ctx);
 
 	// Tell the test module that pcap found a packet on 
 	// 	a certain channel
@@ -92,6 +92,9 @@ typedef struct test_module
 
 // Send an openflow message from the module to the switch along the control channel
 int send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
+
+// Get the file descriptor of the channel, either raw or otherwise
+int get_channel_fd(struct oflops_context *ctx, oflops_channel ch);
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
 int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);

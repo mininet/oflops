@@ -28,8 +28,7 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
  */
 int run_test_module(oflops_context *ctx, test_module * mod)
 {
-	mod->start(ctx,ctx->channels[OFLOPS_SEND].raw_sock,
-			ctx->channels[OFLOPS_RECV].raw_sock);
+	mod->start(ctx);
 
 	setup_channel( ctx, mod, OFLOPS_CONTROL);
 	setup_channel( ctx, mod, OFLOPS_SEND);

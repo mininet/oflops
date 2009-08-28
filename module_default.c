@@ -14,7 +14,7 @@ int default_module_get_pcap_filter(oflops_channel ofc, char * filter, int buflen
 }
 
 
-int default_module_start(struct oflops_context * ctx, int send_fd, int recv_fd)
+int default_module_start(struct oflops_context * ctx)
 {
 	return 0;
 }
