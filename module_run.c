@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "module_run.h"
+#include "module_default.h"
 #include "test_module.h"
 #include "utils.h"
 
@@ -258,12 +259,39 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
  */
 int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 {
-	void * symbols;
+	void * handle;
 	test_module * mod;
 	mod = malloc_and_check(sizeof(*mod));
 	bzero(mod,sizeof(*mod));
 
 	// open module for dyn symbols
-	symbols = dlopen(mod_filename,RTLD_NOW);
-	return 1;	// fail for now
+	handle = dlopen(mod_filename,RTLD_NOW);
+	mod->name = dlsym(handle,"name");
+	if(!mod->name)
+	{
+		fprintf( stderr, "Module %s does not contain a name() function\n", mod_filename);
+		free(mod);
+		dlclose(handle);
+		return 1;	// fail for now
+	}
+
+#define symbol_fetch(X) mod->X = dlsym(handle, #X);   if(!mod->X) mod->X = default_module_##X
+	symbol_fetch(init);
+	symbol_fetch(start);
+	symbol_fetch(get_pcap_filter);
+	symbol_fetch(pcap_event);
+	symbol_fetch(of_event_packet_in);
+	symbol_fetch(of_event_flow_removed);
+	symbol_fetch(of_event_port_status);
+	symbol_fetch(of_event_other);
+	symbol_fetch(timer_event);
+#undef symbol_fetch
+	if(ctx->n_tests >= ctx->max_tests)
+	{
+		ctx->max_tests *=2;
+		ctx->tests = realloc_and_check(ctx->tests, ctx->max_tests * sizeof(struct test_modules *));
+	}
+	ctx->tests[ctx->n_tests++] = mod;
+	dlclose(handle);
+	return 0;
 }
