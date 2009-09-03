@@ -145,7 +145,6 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 	poll_set[ctx->n_channels].fd = ctx->control_fd;	// add the control channel at the end
 	poll_set[ctx->n_channels].events = POLLIN;
 
-	ctx->should_end = 0;
 	while(!ctx->should_end)
 	{
 		int next_event;
