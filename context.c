@@ -21,10 +21,13 @@ oflops_context * oflops_default_context(void)
 
 	ctx->listen_fd   = -1;
 	ctx->snaplen = -1;
+
+	ctx->n_channels=1;
+	ctx->max_channels=10;
+	ctx->channels = malloc_and_check(sizeof(oflops_channel)* ctx->max_channels);
 	
 	ctx->channels[OFLOPS_CONTROL].raw_sock = -1;
-	ctx->channels[OFLOPS_SEND].raw_sock = -1;
-	ctx->channels[OFLOPS_RECV].raw_sock = -1;
+	// initalize other channels later
 
 	return ctx;
 }
@@ -33,6 +36,6 @@ oflops_context * oflops_default_context(void)
 // 	run me between tests
 int reset_context(oflops_context * ctx)
 {
-
+	// TODO: reset any state between experiments
 	return 0;
 }

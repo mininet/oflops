@@ -7,11 +7,15 @@ struct test_module;
 
 typedef enum oflops_channel {
 	OFLOPS_CONTROL,		// openflow control channel, e.g., eth0
-	OFLOPS_SEND,		// sending channel, e.g., eth1
-	OFLOPS_RECV		// recving channel, e.g., eth2
+	OFLOPS_DATA1,		// sending channel, e.g., eth1
+	OFLOPS_DATA2, 		// recving channel, e.g., eth2
+	OFLOPS_DATA3, 		// recving channel, e.g., eth2
+	OFLOPS_DATA4, 		// recving channel, e.g., eth2
+	OFLOPS_DATA5, 		// recving channel, e.g., eth2
+	OFLOPS_DATA6, 		// recving channel, e.g., eth2
+	OFLOPS_DATA7, 		// recving channel, e.g., eth2
+	OFLOPS_DATA8, 		// recving channel, e.g., eth2
 } oflops_channel;
-
-extern char * oflops_channel_names[4];
 
 #include "oflops.h"
 #include "oflops_pcap.h"
@@ -94,8 +98,10 @@ typedef struct test_module
 // Send an openflow message from the module to the switch along the control channel
 int send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
 
-// Get the file descriptor of the channel, either raw or otherwise
+// Get the file descriptor of the channel 
 int get_channel_fd(struct oflops_context *ctx, oflops_channel ch);
+// Get the file descriptor of the channel 
+int get_channel_raw_fd(struct oflops_context *ctx, oflops_channel ch);
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
 int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);

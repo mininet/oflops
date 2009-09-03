@@ -22,9 +22,7 @@ int main(int argc, char * argv[])
 
 	setup_control_channel(ctx);
 
-	fprintf(stderr, "-----------------------------------------------\n");
-	fprintf(stderr, "----------  Running %d Tests    ---------------\n", ctx->n_tests);
-	fprintf(stderr, "-----------------------------------------------\n\n\n");
+	fprintf(stderr, "Running %d Test%s\n", ctx->n_tests, ctx->n_tests>1?"s":"");
 
 	for(i=0;i<ctx->n_tests;i++)
 	{

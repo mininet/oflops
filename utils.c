@@ -47,6 +47,6 @@ void * _realloc_and_check(void * ptr, size_t bytes, char * file, int lineno)
 
 void perror_and_exit(char * str, int exit_code)
 {
-	fprintf(stderr,"%s\n",str);
+	perror(str);
 	exit(exit_code);
 }

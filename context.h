@@ -11,10 +11,11 @@ struct oflops_context;
 typedef struct channel_info {
 	char * dev;
 	pcap_t * pcap;
-	int pcap_fd;
+	int pcap_fd;	// fd for pcap filter
+	int raw_sock;	// raw ethernet access fd
+	int sock;	// UDP socket
 
 	int want_pcap;
-	int raw_sock;
 } channel_info;
 
 
@@ -30,7 +31,9 @@ typedef struct oflops_context
 	int snaplen;
 
 	int control_fd;
-	channel_info channels[3];	// control, send, recv
+	int n_channels;
+	int max_channels;
+	channel_info * channels;	// control, send, recv,etc.
 	int should_end;
 } oflops_context;
 

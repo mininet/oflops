@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,14 +14,15 @@
 
 struct option oflops_options[] = {
 // 	name	, has_arg,  *var, val
+	{"control", required_argument, NULL, 'c'}, 		// --control=eth0
 	{"port", required_argument, NULL, 'p'}, 		// --port=6633
 	{ 0 , 0 , 0, 0}
 };
 
 char * option_args[] =  {
-	"",		// no argument
-	"<arg>",	//required arg
-	"[arg]",	// optional arg
+	"",			// no argument
+	"<required_arg>",	//required arg
+	"[arg]",		// optional arg
 };
 
 static char * make_short_from_long(struct option long_options[]);
@@ -34,16 +36,23 @@ static void parse_test_module(oflops_context * ctx, int argc, char * argv[]);
 int parse_args(oflops_context * ctx, int argc, char * argv[])
 {
 	int c;
-	int options_index = 0;
+	int options_index;
+	char * short_options = make_short_from_long(oflops_options);
 
 	while(1)
 	{
-		c = getopt_long_only(argc, argv, make_short_from_long(oflops_options), 
-				oflops_options, &options_index);
+		c = getopt_long(argc, argv, short_options, oflops_options, &options_index);
 		if( c == -1 )
 			break;	// done args parsing
 		switch(c)
 		{
+			case 'c':
+				assert(OFLOPS_CONTROL == 0);
+				assert(ctx->n_channels > 0);
+				if(!optarg)
+					usage(argv[optind], "requires argument");
+				ctx->channels[OFLOPS_CONTROL].dev = strdup(optarg);
+				break;
 			case 'p':
 				ctx->listen_port = atoi(optarg);
 				break;

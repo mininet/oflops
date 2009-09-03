@@ -11,9 +11,6 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-#include <linux/if_packet.h>
-#include <linux/if_ether.h>
-#include <linux/if_arp.h>
 
 #include "module_run.h"
 #include "module_default.h"
@@ -35,10 +32,9 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
  */
 int run_test_module(oflops_context *ctx, test_module * mod)
 {
-
-	setup_channel( ctx, mod, OFLOPS_CONTROL);
-	setup_channel( ctx, mod, OFLOPS_SEND);
-	setup_channel( ctx, mod, OFLOPS_RECV);
+	int i;
+	for(i=0;i<ctx->n_channels;i++)
+		setup_channel( ctx, mod, i);
 
 	mod->start(ctx);
 
@@ -58,38 +54,36 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel 
 	char buf[BUFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program filter;
-	struct ifreq ifr;
 	bpf_u_int32 mask=0, net=0;
 
 	channel_info *ch_info = &ctx->channels[ch];	
 
-	if(ch_info->dev==NULL)
+	if(ch_info->dev==NULL)	// no device specified
 	{
-		fprintf(stderr,"Channel %s not configured; disabling\n",
-				oflops_channel_names[ch]);
-		return;
+		ch_info->dev = pcap_lookupdev(errbuf);
+		fprintf(stderr,"%s channel %i not configured; guessing device: ",
+				((ch==OFLOPS_CONTROL)?"Control":"Data"), ch);
+		if(ch_info->dev)
+			fprintf(stderr,"%s",ch_info->dev);
+		else
+		{
+			fprintf(stderr, " pcap_lookup() failed: %s ; exiting....\n", errbuf);
+			exit(1);
+		}
 	}
-	// setup raw socket
-	ch_info->raw_sock = socket(AF_PACKET,SOCK_RAW, htons(ETH_P_ALL));
-	if( ch_info->raw_sock == -1)
-		perror_and_exit("raw socket(AF_PACKET,SOCK_RAW,htons(ETH_P_ALL))",1);
-	// bind to a specific port
-	strncpy(ifr.ifr_name,ch_info->dev,IFNAMSIZ);
-	if( ioctl( ch_info->raw_sock, SIOCGIFINDEX, &ifr)  == -1 )
-		perror_and_exit("ioctl() bind to dev",1);
 
 	// setup pcap filter, if wanted
 	ch_info->want_pcap = mod->get_pcap_filter(ch,buf,BUFLEN);
 	if(!ch_info->want_pcap)
 	{
-		fprintf(stderr, "Test %s:  No pcap filter for channel %s\n",
-				mod->name(), oflops_channel_names[ch]);
+		fprintf(stderr, "Test %s:  No pcap filter for channel %d on %s\n",
+				mod->name(), ch, ch_info->dev);
 		ch_info->pcap=NULL;
 		return;
 	}
 	assert(ch_info->dev);		// need to have someting here
-	fprintf(stderr,"Test %s:  Starting pcap filter \"%s\" on dev %s for channel %s\n",
-			mod->name(), buf, ch_info->dev, oflops_channel_names[ch]);
+	fprintf(stderr,"Test %s:  Starting pcap filter \"%s\" on dev %s for channel %d\n",
+			mod->name(), buf, ch_info->dev, ch);
 	errbuf[0]=0;
 	ch_info->pcap = pcap_open_live(
 					ch_info->dev,
@@ -134,35 +128,35 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel 
  */
 static void test_module_loop(oflops_context *ctx, test_module *mod)
 {
-	struct pollfd poll_set[4];
+	struct pollfd * poll_set;
 	int ret;
+	int len; 
+	int ch;
 
-	bzero(poll_set,sizeof(4 * sizeof(struct pollfd)));
+	len = sizeof(struct pollfd) * (ctx->n_channels + 1);
+	poll_set = malloc_and_check(len);
+	bzero(poll_set,len);
 
-	poll_set[OFLOPS_CONTROL].fd = ctx->channels[OFLOPS_CONTROL].pcap_fd;
-	poll_set[OFLOPS_SEND].fd = ctx->channels[OFLOPS_SEND].pcap_fd;
-	poll_set[OFLOPS_RECV].fd = ctx->channels[OFLOPS_RECV].pcap_fd;
-	poll_set[3].fd = ctx->control_fd;
-
-	// look for pcap events if the module wants them
-	if(ctx->channels[OFLOPS_CONTROL].pcap)
-		poll_set[OFLOPS_CONTROL].events = POLLIN;
-	if(ctx->channels[OFLOPS_SEND].pcap)
-		poll_set[OFLOPS_SEND].events = POLLIN;
-	if(ctx->channels[OFLOPS_RECV].pcap)
-		poll_set[OFLOPS_RECV].events = POLLIN;
-	// always listen to openflow control channel messages
-	poll_set[3].events = POLLIN;		
+	for(ch=0; ch< ctx->n_channels; ch++)
+	{
+		poll_set[ch].fd = ctx->channels[ch].pcap_fd;
+		poll_set[ch].events = POLLIN;
+	}
+	poll_set[ctx->n_channels].fd = ctx->control_fd;	// add the control channel at the end
+	poll_set[ctx->n_channels].events = POLLIN;
 
 	ctx->should_end = 0;
 	while(!ctx->should_end)
 	{
 		int next_event;
 		
-		while(next_event <= 0 )
-			timer_run_next_event(ctx);
 		next_event = timer_get_next_event(ctx);
-		ret = poll(poll_set, 4, next_event);
+		while(next_event <= 0 )
+		{
+			timer_run_next_event(ctx);
+			next_event = timer_get_next_event(ctx);
+		}
+		ret = poll(poll_set, ctx->n_channels+1, next_event);
 
 		if(( ret == -1 ) && ( errno != EINTR))
 			perror_and_exit("poll",1);
@@ -179,28 +173,26 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 
 /*******************************************************
  * static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
- * this channel got an event
- * 	figure out what it is, parse it, and send it to
- * 	the test module
+ * a channel got an event
+ * 	map the event to the correct channel, and call the appropriate event handler
+ *
+ * 	FIXME: for efficency, we really should have a faster fd-> channel map, but 
+ * 		since the number of channels is small, we can just be fugly
  */
 
 
 static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
 {
-	// this is inefficient, but ok since there are really only 4 cases
+	int ch;
 	if(pfd->fd == ctx->control_fd)
-		process_control_event(ctx, mod, pfd);
-	else if (pfd->fd == ctx->channels[OFLOPS_CONTROL].pcap_fd)
-		process_pcap_event(ctx, mod, pfd,OFLOPS_CONTROL);
-	else if (pfd->fd == ctx->channels[OFLOPS_SEND].pcap_fd)
-		process_pcap_event(ctx, mod, pfd,OFLOPS_SEND);
-	else if (pfd->fd == ctx->channels[OFLOPS_RECV].pcap_fd)
-		process_pcap_event(ctx, mod, pfd,OFLOPS_RECV);
-	else 
-	{
-		fprintf(stderr, "Event on unknown fd %d .. dying", pfd->fd);
-		abort();
-	}
+		return process_control_event(ctx, mod, pfd);
+	// this is inefficient, but ok since there are really typically only ~8  cases
+	for(ch=0; ch< ctx->n_channels; ch++)
+		if (pfd->fd == ctx->channels[ch].pcap_fd)
+			return process_pcap_event(ctx, mod, pfd,ch);
+	// only get here if we've screwed up somehow
+	fprintf(stderr, "Event on unknown fd %d .. dying", pfd->fd);
+	abort();
 }
 
 /***********************************************************************************************
