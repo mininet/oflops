@@ -16,6 +16,7 @@ oflops_SOURCES= oflops.c oflops.h \
 	context.h context.c \
 	control.h control.c \
 	timer_event.h timer_event.c \
+	wc_event.h wc_event.c \
 	usage.h usage.c \
 	module_run.h  module_run.c \
 	module_default.h  module_default.c \

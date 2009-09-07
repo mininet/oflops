@@ -30,6 +30,7 @@ int main(int argc, char * argv[])
 		fprintf(stderr, "------------ TEST %s ----------\n", (*(ctx->tests[i]->name))());
 		fprintf(stderr, "-----------------------------------------------\n");
 		reset_context(ctx);
+		ctx->curr_test = ctx->tests[i];
 		run_test_module(ctx, ctx->tests[i]);
 	}
 	fprintf(stderr, "-----------------------------------------------\n");

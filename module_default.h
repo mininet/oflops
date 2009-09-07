@@ -22,6 +22,6 @@ int default_module_of_event_packet_in(struct ofp_packet_in * pktin);
 
 int default_module_of_event_port_status(struct ofp_port_status * ofph);
 int default_module_of_event_other(struct ofp_header * ofph);
-int default_module_timer_event(struct timer_event * te);
+int default_module_timer_event(struct oflops_context * ctx, struct timer_event * te);
 
 #endif

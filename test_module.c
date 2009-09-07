@@ -17,13 +17,21 @@
 
 #include "test_module.h"
 
+
+/***********************************************************************
+ * hook for the test module to signal that the test is done
+ */
+
 int end_test(struct oflops_context *ctx)
 {
 	ctx->should_end = 1;
 	return 0;
 }
 
-
+/**********************************************************************
+ * hook for the test module to get access to a raw file descriptor bound
+ * 	to the data channel's device
+ */
 
 int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel ch)
 {
@@ -45,6 +53,10 @@ int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel ch)
 	return ch_info->raw_sock;
 }
 
+/**********************************************************************
+ * hook for the test module to get access to a udp file descriptor bound
+ * 	to the data channel's device
+ */
 int get_channel_fd(struct oflops_context * ctx, oflops_channel ch)
 {
 	struct ifreq ifr;
@@ -64,3 +76,37 @@ int get_channel_fd(struct oflops_context * ctx, oflops_channel ch)
 		perror_and_exit("ioctl() bind to dev",1);
 	return ch_info->sock;
 }
+
+/***************************************************************************
+ * hook for the test module to schedule an timer_event to be called back into the module
+ */
+
+int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
+{
+	wc_event_add(ctx->timers, NULL, arg, *tv);
+}
+
+
+/*****************************************************************************
+ * hook for the test module to send an openflow mesg across the control channel 
+ * 	to the switch
+ * 	FIXME: assert()'s that the message doesn't block -- if this is a problem
+ * 	we need to implement some buffering and mod the select() call to open for
+ * 	writing
+ */
+int send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
+{
+	int len = ntohs(ofph->length);
+	int err;
+
+	err = write(ctx->control_fd, ofph, len);
+	if(err<0)
+		perror_and_exit("send_of_mesg: write()",1);
+	if( err < len)
+	{
+		fprintf(stderr, "Short write on control channel (%d < %d) -- FIXME!", err, len);
+		abort();
+	}
+	return err;
+}
+

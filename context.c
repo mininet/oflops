@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "context.h"
+#include "timer_event.h"
 #include "utils.h"
 
 #include <pcap.h>
@@ -37,5 +38,6 @@ oflops_context * oflops_default_context(void)
 int reset_context(oflops_context * ctx)
 {
 	// TODO: reset any state between experiments
+	timer_init(ctx);
 	return 0;
 }

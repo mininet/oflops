@@ -53,7 +53,7 @@ int default_module_of_event_other(struct ofp_header * ofph)
 {
 	return 0;
 }
-int default_module_timer_event(struct timer_event * te)
+int default_module_timer_event(struct oflops_context * ctx, struct timer_event * te)
 {
 	return 0;
 }
