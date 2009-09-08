@@ -73,7 +73,7 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel 
 	}
 
 	// setup pcap filter, if wanted
-	ch_info->want_pcap = mod->get_pcap_filter(ch,buf,BUFLEN);
+	ch_info->want_pcap = mod->get_pcap_filter(ctx,ch,buf,BUFLEN);
 	if(!ch_info->want_pcap)
 	{
 		fprintf(stderr, "Test %s:  No pcap filter for channel %d on %s\n",
@@ -132,22 +132,29 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 	int ret;
 	int len; 
 	int ch;
+	int n_channels=0;
 
 	len = sizeof(struct pollfd) * (ctx->n_channels + 1);
 	poll_set = malloc_and_check(len);
-	bzero(poll_set,len);
-
-	for(ch=0; ch< ctx->n_channels; ch++)
-	{
-		poll_set[ch].fd = ctx->channels[ch].pcap_fd;
-		poll_set[ch].events = POLLIN;
-	}
-	poll_set[ctx->n_channels].fd = ctx->control_fd;	// add the control channel at the end
-	poll_set[ctx->n_channels].events = POLLIN;
 
 	while(!ctx->should_end)
 	{
 		int next_event;
+		n_channels=0;
+		bzero(poll_set,len);
+
+		for(ch=0; ch< ctx->n_channels; ch++)
+		{
+			if( ctx->channels[ch].pcap)
+			{
+				poll_set[n_channels].fd = ctx->channels[ch].pcap_fd;
+				poll_set[n_channels].events = POLLIN;
+				n_channels++;
+			}
+		}
+		poll_set[n_channels].fd = ctx->control_fd;	// add the control channel at the end
+		poll_set[n_channels].events = POLLIN;
+		n_channels++;
 		
 		next_event = timer_get_next_event(ctx);
 		while(next_event <= 0 )
@@ -155,7 +162,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 			timer_run_next_event(ctx);
 			next_event = timer_get_next_event(ctx);
 		}
-		ret = poll(poll_set, ctx->n_channels+1, next_event);
+		ret = poll(poll_set, n_channels, next_event);
 
 		if(( ret == -1 ) && ( errno != EINTR))
 			perror_and_exit("poll",1);
@@ -211,7 +218,24 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
 	assert(pfd->revents & POLLIN);		// FIXME: only know how to handle POLLIN events for now
 	// read just the header from the socket
 	err = read(pfd->fd,&ofph, sizeof(ofph));
-	assert(err == sizeof(ofph));		// FIXME!
+	if(err < 0)
+	{
+		perror("process_control_event:read() ::");
+		return ;
+	}
+	if(err == 0)
+	{
+		fprintf(stderr, "Switch Control Connection reset! wtf!?!...exiting\n");
+		exit(0);
+	}
+	if(err <  sizeof(ofph))		// FIXME!
+	{
+		fprintf(stderr, "process_control_event:read(): short read (%d < %u)\n",
+				err, sizeof(ofph));
+		abort();
+		return;
+
+	}
 	msglen = ntohs(ofph.length);
 
 	buf = malloc_and_check(msglen);
@@ -227,22 +251,25 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
 	switch(ofph.type)
 	{
 		case OFPT_PACKET_IN:
-			mod->of_event_packet_in((struct ofp_packet_in *)buf);
+			mod->of_event_packet_in(ctx, (struct ofp_packet_in *)buf);
 			break;
 		case OFPT_FLOW_EXPIRED:
 			#if OFP_VERSION == 0x97
-				mod->of_event_flow_removed((struct ofp_flow_expired *)buf);
+				mod->of_event_flow_removed(ctx, (struct ofp_flow_expired *)buf);
 			#elif OFP_VERSION == 0x98
-				mod->of_event_flow_removed((struct ofp_flow_removed *)buf);
+				mod->of_event_flow_removed(ctx, (struct ofp_flow_removed *)buf);
 			#else
 			#error "Unknown version of openflow"
 			#endif
 			break;
 		case OFPT_PORT_STATUS:
-			mod->of_event_port_status((struct ofp_port_status *)buf);
+			mod->of_event_port_status(ctx, (struct ofp_port_status *)buf);
+			break;
+		case OFPT_ECHO_REQUEST:
+			mod->of_event_echo_request(ctx, (struct ofp_header *)buf);
 			break;
 		default:
-			mod->of_event_other((struct ofp_header * ) buf);
+			mod->of_event_other(ctx, (struct ofp_header * ) buf);
 			break;
 	};
 }
@@ -262,7 +289,7 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 	// read the next packet from the appropriate pcap socket
 	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
 	// dispatch it to the test module
-	mod->pcap_event(wrap.pe, ch);
+	mod->pcap_event(ctx, wrap.pe, ch);
 	// clean up our mess
 	pcap_event_free(wrap.pe);
 	return;
@@ -310,9 +337,10 @@ int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 	symbol_fetch(pcap_event);
 	symbol_fetch(of_event_packet_in);
 	symbol_fetch(of_event_flow_removed);
+	symbol_fetch(of_event_echo_request);
 	symbol_fetch(of_event_port_status);
 	symbol_fetch(of_event_other);
-	symbol_fetch(timer_event);
+	symbol_fetch(handle_timer_event);
 #undef symbol_fetch
 	if(ctx->n_tests >= ctx->max_tests)
 	{

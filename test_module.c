@@ -81,7 +81,7 @@ int get_channel_fd(struct oflops_context * ctx, oflops_channel ch)
  * hook for the test module to schedule an timer_event to be called back into the module
  */
 
-int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
+int schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
 {
 	wc_event_add(ctx->timers, NULL, arg, *tv);
 }

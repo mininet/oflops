@@ -35,7 +35,7 @@ int timer_run_next_event(struct oflops_context *ctx)
 	te.arg = val;
 	te.sched_time  = t;
 	// func is ignored by oflops
-	ctx->curr_test->timer_event(ctx, &te);
+	ctx->curr_test->handle_timer_event(ctx, &te);
 	
 	return 0;
 }

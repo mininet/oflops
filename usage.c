@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "openflow/openflow.h"
+#include "context.h"
 
 
 #include "usage.h"
@@ -14,8 +15,9 @@
 
 struct option oflops_options[] = {
 // 	name	, has_arg,  *var, val
-	{"control", required_argument, NULL, 'c'}, 		// --control=eth0
-	{"port", required_argument, NULL, 'p'}, 		// --port=6633
+	{"control-dev", required_argument, NULL, 'c'}, 		// --control-dev eth0
+	{"data-dev", required_argument, NULL, 'd'}, 		// --data-dev eth1
+	{"port", required_argument, NULL, 'p'}, 		// --port 6633
 	{ 0 , 0 , 0, 0}
 };
 
@@ -53,8 +55,19 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 					usage(argv[optind], "requires argument");
 				ctx->channels[OFLOPS_CONTROL].dev = strdup(optarg);
 				break;
+			case 'd':
+				if(ctx->n_channels >= ctx->max_channels)	// resize array if needed
+				{
+					ctx->max_channels *= 2;
+					ctx->channels = realloc_and_check(ctx->channels, ctx->max_channels * sizeof(oflops_channel));
+				}
+				if(!optarg)
+					usage(argv[optind], "requires argument");
+				ctx->channels[ctx->n_channels].dev = strdup(optarg);
+				break;
 			case 'p':
 				ctx->listen_port = atoi(optarg);
+				fprintf(stderr,"Setting Control listen port to %d\n", ctx->listen_port);
 				break;
 			default:
 				usage("unknown option", argv[optind]);
@@ -114,6 +127,10 @@ void usage(char * s1, char *s2)
 		i++;
 		o = &oflops_options[i];
 	} while(o->name);
+
+	fprintf(stderr, "\n\nExample invocation:\n"
+			"oflops -c eth0 -d eth1 -d eth2 -p 6633 liboflops_debug.so test_args\n");
+
 	exit(1);
 }
 /**************************************************************************

@@ -40,12 +40,12 @@ typedef struct test_module
 	// DEFAULT: NOOP
 	//
 	// return 0 if success, -1 if fatal error
-	int (*init)(char * config_str);
+	int (*init)(struct oflops_context *ctx, char * config_str);
 
 	// Ask module what pcap_filter it wants for this channel
 	//
 	// DEFAULT: return zero --> don't send pcap events on this channel
-	int (*get_pcap_filter)(oflops_channel ofc, char * filter, int buflen);
+	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel ofc, char * filter, int buflen);
 
 	// Tell the module it's time to start its test
 	// 	pass raw sockets for send and recv channels
@@ -63,7 +63,7 @@ typedef struct test_module
 	// 	for get_pcap_filter()
 	//
 	// return 0 if success or -1 on error
-	int (*pcap_event)(struct pcap_event * pe, oflops_channel ch);
+	int (*pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel ch);
 
 	// Tell the test module that an openflow mesg came
 	// 	over the control channel
@@ -71,23 +71,24 @@ typedef struct test_module
 	// DEFAULT: ignore this type of openflow message
 	//
 	// return 0 if success or -1 on error
-	int (*of_event_packet_in)(struct ofp_packet_in * ofph);
+	int (*of_event_packet_in)(struct oflops_context *ctx, struct ofp_packet_in * ofph);
 	#if OFP_VERSION == 0x97
-		int (*of_event_flow_removed)(struct ofp_flow_expired * ofph);
+		int (*of_event_flow_removed)(struct oflops_context *ctx, struct ofp_flow_expired * ofph);
 	#elif OFP_VERSION == 0x98
-		int (*of_event_flow_removed)(struct ofp_flow_removed * ofph);
+		int (*of_event_flow_removed)(struct oflops_context *ctx, struct ofp_flow_removed * ofph);
 	#else
 		#error "Unknown version of openflow"
 	#endif
-	int (*of_event_port_status)(struct ofp_port_status * ofph);
-	int (*of_event_other)(struct ofp_header * ofph);	
+	int (*of_event_echo_request)(struct oflops_context *ctx, struct ofp_header * ofph);
+	int (*of_event_port_status)(struct oflops_context *ctx, struct ofp_port_status * ofph);
+	int (*of_event_other)(struct oflops_context *ctx, struct ofp_header * ofph);	
 
 	// Tell the test module that a timer went off
 	//
 	// DEFAULT: ignore timer events
 	//
 	// return 0 if success or -1 on error
-	int (*timer_event)(struct oflops_context * ctx, struct timer_event * te);
+	int (*handle_timer_event)(struct oflops_context * ctx, struct timer_event * te);
 	void * symbol_handle;
 	
 } test_module;
