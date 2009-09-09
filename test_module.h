@@ -97,19 +97,21 @@ typedef struct test_module
 
 
 // Send an openflow message from the module to the switch along the control channel
-int send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
+int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
+// Send an raw message from the module to the switch along the data channel
+int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len);
 
 // Get the file descriptor of the channel 
-int get_channel_fd(struct oflops_context *ctx, oflops_channel_name ch);
+int oflops_get_channel_fd(struct oflops_context *ctx, oflops_channel_name ch);
 // Get the file descriptor of the channel 
-int get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch);
+int oflops_get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch);
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
 // 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
-int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
+int oflops_schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
 
 // Tell the harness this test is over
-int end_test(struct oflops_context *ctx);
+int oflops_end_test(struct oflops_context *ctx);
 
 
 

@@ -64,7 +64,7 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 				}
 				if(!optarg)
 					usage(argv[optind], "requires argument");
-				ctx->channels[ctx->n_channels++].dev = strdup(optarg);
+				channel_info_init(&ctx->channels[ctx->n_channels++], optarg);
 				fprintf(stderr,"Adding a data channel on %s\n", optarg);
 				break;
 			case 'p':

@@ -6,18 +6,9 @@ struct oflops_context;
 #include "oflops.h"
 #include "test_module.h"
 #include "wc_event.h"
+#include "channel_info.h"
 
 #include <pcap.h>
-
-typedef struct channel_info {
-	char * dev;
-	pcap_t * pcap;
-	int pcap_fd;	// fd for pcap filter
-	int raw_sock;	// raw ethernet access fd
-	int sock;	// UDP socket
-
-	int want_pcap;
-} channel_info;
 
 
 

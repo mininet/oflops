@@ -22,7 +22,7 @@
  * hook for the test module to signal that the test is done
  */
 
-int end_test(struct oflops_context *ctx)
+int oflops_end_test(struct oflops_context *ctx)
 {
 	ctx->should_end = 1;
 	return 0;
@@ -33,7 +33,7 @@ int end_test(struct oflops_context *ctx)
  * 	to the data channel's device
  */
 
-int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
+int oflops_get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
 	struct channel_info * ch_info;
@@ -57,7 +57,7 @@ int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
  * hook for the test module to get access to a udp file descriptor bound
  * 	to the data channel's device
  */
-int get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
+int oflops_get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
 	struct channel_info * ch_info;
@@ -81,7 +81,7 @@ int get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
  * hook for the test module to schedule an timer_event to be called back into the module
  */
 
-int schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
+int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
 {
 	return wc_event_add(ctx->timers, NULL, arg, *tv);
 }
@@ -94,7 +94,7 @@ int schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * 
  * 	we need to implement some buffering and mod the select() call to open for
  * 	writing
  */
-int send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
+int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 {
 	int len = ntohs(ofph->length);
 	int err;
@@ -110,3 +110,33 @@ int send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 	return err;
 }
 
+/********************************************************************************
+ * hook for the test module to send a raw message out a certain data channel
+ * 	here, "raw" means with ethernet header
+ */
+
+int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len)
+{
+	struct sockaddr_ll socket_address;
+	int send_result = 0;
+	int sock = oflops_get_channel_raw_fd(ctx,ch);
+
+	bzero(&socket_address,sizeof(socket_address));
+	socket_address.sll_family   = PF_PACKET;
+	socket_address.sll_protocol = htons(ETH_P_ALL);
+	/*index of the network device
+	 *          * see full code later how to retrieve it*/
+	socket_address.sll_ifindex  = ctx->channels[ch].ifindex;
+	/********************* do we need any of this?
+		socket_address.sll_hatype   = ARPHRD_ETHER; don't need?
+		socket_address.sll_halen    = ETH_ALEN;
+		socket_address.sll_pkttype  = PACKET_OTHERHOST;
+		*/
+
+	/*send the packet*/
+	send_result = sendto(sock, msg, len, 0,
+			(struct sockaddr*)&socket_address, sizeof(socket_address));
+	if (send_result == -1)
+		perror("oflops_send_raw_mesg(): sendto()");
+	return send_result;
+}

@@ -37,7 +37,11 @@ oflops_context * oflops_default_context(void)
 // 	run me between tests
 int reset_context(oflops_context * ctx)
 {
-	// TODO: reset any state between experiments
+	// reset any state between experiments
 	timer_init(ctx);
+	// clean up after test (each test does its own cleanup, except for the 
+	// 	stuff oflops allocated)
+	if(ctx->curr_test)
+		dlclose(ctx->curr_test->symbol_handle);
 	return 0;
 }
