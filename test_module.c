@@ -33,7 +33,7 @@ int end_test(struct oflops_context *ctx)
  * 	to the data channel's device
  */
 
-int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel ch)
+int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
 	struct channel_info * ch_info;
@@ -57,7 +57,7 @@ int get_channel_raw_fd(struct oflops_context * ctx, oflops_channel ch)
  * hook for the test module to get access to a udp file descriptor bound
  * 	to the data channel's device
  */
-int get_channel_fd(struct oflops_context * ctx, oflops_channel ch)
+int get_channel_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
 	struct channel_info * ch_info;
@@ -83,7 +83,7 @@ int get_channel_fd(struct oflops_context * ctx, oflops_channel ch)
 
 int schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg)
 {
-	wc_event_add(ctx->timers, NULL, arg, *tv);
+	return wc_event_add(ctx->timers, NULL, arg, *tv);
 }
 
 

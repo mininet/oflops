@@ -25,7 +25,7 @@ oflops_context * oflops_default_context(void)
 
 	ctx->n_channels=1;
 	ctx->max_channels=10;
-	ctx->channels = malloc_and_check(sizeof(oflops_channel)* ctx->max_channels);
+	ctx->channels = malloc_and_check(sizeof(struct channel_info)* ctx->max_channels);
 	
 	ctx->channels[OFLOPS_CONTROL].raw_sock = -1;
 	// initalize other channels later

@@ -19,11 +19,11 @@
 
 
 
-static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch);
+static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch);
 static void test_module_loop(oflops_context *ctx, test_module *mod);
 static void process_event(oflops_context *ctx, test_module * mod, struct pollfd *fd);
 static void process_control_event(oflops_context *ctx, test_module * mod, struct pollfd *fd);
-static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch);
+static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel_name ch);
 
 
 /******************************************************
@@ -49,7 +49,7 @@ int run_test_module(oflops_context *ctx, test_module * mod)
  */
 
 
-static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel ch )
+static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch )
 {
 	char buf[BUFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -276,12 +276,12 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
 
 
 /**********************************************************************************************
- * static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch);
+ * static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel_name ch);
  * 	front end to oflops_pcap_handler
  * 		make sure all of the memory is kosher before and after
  * 		pcap's callback thing has always annoyed me
  */
-static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel ch)
+static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel_name ch)
 {
 	struct pcap_event_wrapper wrap;
 	int count;

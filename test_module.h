@@ -5,7 +5,7 @@
 
 struct test_module;
 
-typedef enum oflops_channel {
+typedef enum oflops_channel_name {
 	OFLOPS_CONTROL,		// openflow control channel, e.g., eth0
 	OFLOPS_DATA1,		// sending channel, e.g., eth1
 	OFLOPS_DATA2, 		// recving channel, e.g., eth2
@@ -15,7 +15,7 @@ typedef enum oflops_channel {
 	OFLOPS_DATA6, 		// recving channel, e.g., eth2
 	OFLOPS_DATA7, 		// recving channel, e.g., eth2
 	OFLOPS_DATA8, 		// recving channel, e.g., eth2
-} oflops_channel;
+} oflops_channel_name;
 
 #include "oflops.h"
 #include "oflops_pcap.h"
@@ -45,7 +45,7 @@ typedef struct test_module
 	// Ask module what pcap_filter it wants for this channel
 	//
 	// DEFAULT: return zero --> don't send pcap events on this channel
-	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel ofc, char * filter, int buflen);
+	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
 
 	// Tell the module it's time to start its test
 	// 	pass raw sockets for send and recv channels
@@ -63,7 +63,7 @@ typedef struct test_module
 	// 	for get_pcap_filter()
 	//
 	// return 0 if success or -1 on error
-	int (*pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel ch);
+	int (*pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch);
 
 	// Tell the test module that an openflow mesg came
 	// 	over the control channel
@@ -100,11 +100,12 @@ typedef struct test_module
 int send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
 
 // Get the file descriptor of the channel 
-int get_channel_fd(struct oflops_context *ctx, oflops_channel ch);
+int get_channel_fd(struct oflops_context *ctx, oflops_channel_name ch);
 // Get the file descriptor of the channel 
-int get_channel_raw_fd(struct oflops_context *ctx, oflops_channel ch);
+int get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch);
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
+// 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
 int schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
 
 // Tell the harness this test is over

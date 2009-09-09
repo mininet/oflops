@@ -54,16 +54,18 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 				if(!optarg)
 					usage(argv[optind], "requires argument");
 				ctx->channels[OFLOPS_CONTROL].dev = strdup(optarg);
+				fprintf(stderr,"Setting control channel to %s\n", optarg);
 				break;
 			case 'd':
 				if(ctx->n_channels >= ctx->max_channels)	// resize array if needed
 				{
 					ctx->max_channels *= 2;
-					ctx->channels = realloc_and_check(ctx->channels, ctx->max_channels * sizeof(oflops_channel));
+					ctx->channels = realloc_and_check(ctx->channels, ctx->max_channels * sizeof(channel_info));
 				}
 				if(!optarg)
 					usage(argv[optind], "requires argument");
-				ctx->channels[ctx->n_channels].dev = strdup(optarg);
+				ctx->channels[ctx->n_channels++].dev = strdup(optarg);
+				fprintf(stderr,"Adding a data channel on %s\n", optarg);
 				break;
 			case 'p':
 				ctx->listen_port = atoi(optarg);
