@@ -26,5 +26,5 @@ done
 ifconfig veth0 $prefix.1 broadcast $prefix.255
 ifconfig veth1 $prefix.2 broadcast $prefix.255
 
-switch -iveth2,veth4 -d 010203040506 tcp:$prefix.1:$port
+switch -iveth2,veth4 -d 010203040506 --max-backoff=1 tcp:$prefix.1:$port
 
