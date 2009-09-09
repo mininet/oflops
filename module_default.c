@@ -21,7 +21,7 @@ int default_module_start(struct oflops_context * ctx)
 }
 
 
-int default_module_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
+int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
 {
 	return 0;
 }

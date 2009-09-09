@@ -1,5 +1,6 @@
 #!/bin/sh
 
+export PATH=/home/$USER/mine.of/bin:$PATH
 prefix=192.168.250
 port=6633
 sleeptime=0

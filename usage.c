@@ -53,7 +53,7 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 				assert(ctx->n_channels > 0);
 				if(!optarg)
 					usage(argv[optind], "requires argument");
-				ctx->channels[OFLOPS_CONTROL].dev = strdup(optarg);
+				channel_info_init(&ctx->channels[OFLOPS_CONTROL],optarg);
 				fprintf(stderr,"Setting control channel to %s\n", optarg);
 				break;
 			case 'd':

@@ -73,8 +73,7 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_
 	}
 
 	// setup pcap filter, if wanted
-	ch_info->want_pcap = mod->get_pcap_filter(ctx,ch,buf,BUFLEN);
-	if(!ch_info->want_pcap)
+	if( mod->get_pcap_filter(ctx,ch,buf,BUFLEN) <=0)
 	{
 		fprintf(stderr, "Test %s:  No pcap filter for channel %d on %s\n",
 				mod->name(), ch, ch_info->dev);
@@ -117,6 +116,8 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_
 		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
 		exit(1);
 	}
+	ch_info->pcap_fd = pcap_get_selectable_fd(ch_info->pcap);
+
 }
 
 
@@ -132,7 +133,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 	int ret;
 	int len; 
 	int ch;
-	int n_channels=0;
+	int n_fds=0;
 
 	len = sizeof(struct pollfd) * (ctx->n_channels + 1);
 	poll_set = malloc_and_check(len);
@@ -140,21 +141,21 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 	while(!ctx->should_end)
 	{
 		int next_event;
-		n_channels=0;
+		n_fds=0;
 		bzero(poll_set,len);
 
 		for(ch=0; ch< ctx->n_channels; ch++)
 		{
 			if( ctx->channels[ch].pcap)
 			{
-				poll_set[n_channels].fd = ctx->channels[ch].pcap_fd;
-				poll_set[n_channels].events = POLLIN;
-				n_channels++;
+				poll_set[ch].fd = ctx->channels[ch].pcap_fd;
+				poll_set[ch].events = POLLIN;
+				n_fds++;
 			}
 		}
-		poll_set[n_channels].fd = ctx->control_fd;	// add the control channel at the end
-		poll_set[n_channels].events = POLLIN;
-		n_channels++;
+		poll_set[n_fds].fd = ctx->control_fd;	// add the control channel at the end
+		poll_set[n_fds].events = POLLIN;
+		n_fds++;
 		
 		next_event = timer_get_next_event(ctx);
 		while(next_event <= 0 )
@@ -162,7 +163,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 			timer_run_next_event(ctx);
 			next_event = timer_get_next_event(ctx);
 		}
-		ret = poll(poll_set, n_channels, next_event);
+		ret = poll(poll_set, n_fds, next_event);
 
 		if(( ret == -1 ) && ( errno != EINTR))
 			perror_and_exit("poll",1);
@@ -289,7 +290,7 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 	// read the next packet from the appropriate pcap socket
 	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
 	// dispatch it to the test module
-	mod->pcap_event(ctx, wrap.pe, ch);
+	mod->handle_pcap_event(ctx, wrap.pe, ch);
 	// clean up our mess
 	pcap_event_free(wrap.pe);
 	return;
@@ -334,7 +335,7 @@ int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 		mod->X = default_module_##X
 	symbol_fetch(init);
 	symbol_fetch(get_pcap_filter);
-	symbol_fetch(pcap_event);
+	symbol_fetch(handle_pcap_event);
 	symbol_fetch(of_event_packet_in);
 	symbol_fetch(of_event_flow_removed);
 	symbol_fetch(of_event_echo_request);

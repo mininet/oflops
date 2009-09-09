@@ -63,7 +63,7 @@ typedef struct test_module
 	// 	for get_pcap_filter()
 	//
 	// return 0 if success or -1 on error
-	int (*pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch);
+	int (*handle_pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch);
 
 	// Tell the test module that an openflow mesg came
 	// 	over the control channel

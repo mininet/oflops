@@ -10,8 +10,6 @@ typedef struct channel_info {
 	int raw_sock;	// raw ethernet access fd
 	int sock;	// UDP socket
 	int ifindex;	// index of this device
-
-	int want_pcap;
 } channel_info;
 
 int channel_info_init(struct channel_info * channel, char * dev);
