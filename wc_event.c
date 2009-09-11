@@ -269,7 +269,7 @@ int wc_run_next_event(wc_queue * pq)
 	void*arg;
 	struct timeval key,now,diff;
 	static struct timeval last = {0,0};
-	int id,logtype;
+	int id;
 
 	if(wc_queue_isempty(pq))
 		return -1;				// event queue empty

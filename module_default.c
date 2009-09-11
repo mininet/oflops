@@ -52,6 +52,7 @@ int default_module_of_event_echo_request(struct oflops_context *ctx, struct ofp_
 	memcpy(&resp,ofph,sizeof(resp));
 	resp.type = OFPT_ECHO_REPLY;
 	oflops_send_of_mesg(ctx, &resp);
+	return 0;
 }
 
 

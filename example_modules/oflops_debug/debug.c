@@ -4,6 +4,11 @@
 
 #include <net/ethernet.h>
 
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#include <arpa/inet.h>
+
 #include <test_module.h>
 
 #ifndef BUFLEN
@@ -64,7 +69,7 @@ int start(struct oflops_context * ctx)
 		if(err < 0)
 			perror("write");
 	} while(0);
-
+	return 0;
 }
 
 int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
@@ -77,6 +82,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 			te->sched_time.tv_usec, str);
 	if(!strcmp(str,BYESTR))
 		oflops_end_test(ctx);
+	return 0;
 }
 
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
@@ -97,6 +103,7 @@ int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * 
 int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
 {
 	fprintf(stderr, "Got pcap_event\n");
+	return 0;
 }
 
 

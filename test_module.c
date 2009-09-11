@@ -16,6 +16,7 @@
 #include <linux/if_packet.h>
 
 #include "test_module.h"
+#include "utils.h"
 
 
 /***********************************************************************

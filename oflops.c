@@ -34,7 +34,7 @@ int main(int argc, char * argv[])
 		run_test_module(ctx, ctx->tests[i]);
 	}
 	fprintf(stderr, "-----------------------------------------------\n");
-	fprintf(stderr, "---------------    Finished   -----------------\n", ctx->n_tests);
+	fprintf(stderr, "---------------    Finished   -----------------\n");
 	fprintf(stderr, "-----------------------------------------------\n");
 	return 0;
 }

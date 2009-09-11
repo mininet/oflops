@@ -24,7 +24,6 @@ int timer_run_next_event(struct oflops_context *ctx)
 {
 	void (* func)(void *);
 	void * val;
-	struct test_module * mod;
 	int id;
 	struct timeval t;
 	int err;
@@ -46,4 +45,5 @@ int timer_init(struct oflops_context *ctx)
 	if(ctx->timers)
 		wc_queue_free(ctx->timers);
 	ctx->timers = wc_queue_init(10);	// 10 == initial size; gets dynamically resized so it don't matter
+	return 0;
 }

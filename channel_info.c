@@ -11,6 +11,7 @@
 
 
 #include "channel_info.h"
+#include "utils.h"
 
 int channel_info_init(struct channel_info * channel, char * dev)
 {

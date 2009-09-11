@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <arpa/inet.h>
+
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
@@ -39,6 +41,7 @@ int run_test_module(oflops_context *ctx, test_module * mod)
 	mod->start(ctx);
 
 	test_module_loop(ctx,mod);
+	return 0;
 }
 
 
@@ -116,7 +119,9 @@ static void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_
 		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
 		exit(1);
 	}
-	ch_info->pcap_fd = pcap_get_selectable_fd(ch_info->pcap);
+	ch_info->pcap_fd = pcap_fileno(ch_info->pcap);
+	if(pcap_setnonblock(ch_info->pcap, 1, errbuf))
+		fprintf(stderr,"setup_channel: pcap_setnonblock(): %s\n",errbuf);
 
 }
 
@@ -172,8 +177,9 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		else // found something to read
 		{
 			int i;	
-			for(i=0; i<ret; i++)
-				process_event(ctx, mod, &poll_set[i]);
+			for(i=0; i<n_fds; i++)
+				if(poll_set[i].revents & POLLIN)
+					process_event(ctx, mod, &poll_set[i]);
 		}
 	}
 }
@@ -289,6 +295,8 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 
 	// read the next packet from the appropriate pcap socket
 	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
+	if (count == 0)
+		return;
 	// dispatch it to the test module
 	mod->handle_pcap_event(ctx, wrap.pe, ch);
 	// clean up our mess

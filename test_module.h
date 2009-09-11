@@ -108,7 +108,7 @@ int oflops_get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch
 
 // Schedule a time event; arg is passed back to the test_module when the event occurs
 // 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
-int oflops_schedule_time_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
+int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
 
 // Tell the harness this test is over
 int oflops_end_test(struct oflops_context *ctx);

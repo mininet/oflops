@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS=-Wall foreign
 
 OFSRC=@openflowsrc@
 
-CFLAGS+=-I$(OFSRC)/include -Wshadow 
+CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow 
 LDFLAGS+=-L$(OFSRC)/lib 
 
 LDADD=-ldl -lpcap -loflops_test

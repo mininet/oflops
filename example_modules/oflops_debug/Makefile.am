@@ -1,7 +1,7 @@
 TOP=../..
 OFSRC=@openflowsrc@
 
-CFLAGS+=-I$(OFSRC)/include -I$(TOP) -Wshadow 
+CFLAGS+=-Wall -I$(OFSRC)/include -I$(TOP) -Wshadow 
 LDFLAGS+=-L$(TOP)
 
 LDADD=-ldl -lpcap -ltest_module

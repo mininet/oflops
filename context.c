@@ -1,4 +1,5 @@
 #include <string.h>
+#include <dlfcn.h>
 
 #include "context.h"
 #include "timer_event.h"

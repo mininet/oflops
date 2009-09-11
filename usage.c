@@ -11,6 +11,7 @@
 
 #include "usage.h"
 #include "utils.h"
+#include "module_run.h"
 
 
 struct option oflops_options[] = {
@@ -151,5 +152,5 @@ static void parse_test_module(oflops_context * ctx, int argc, char * argv[])
 	for(i=1;((count < BUFLEN) && (i<argc)); i++)
 		count += snprintf(buf,BUFLEN-count-1, " %s", argv[i]);
 	if(load_test_module(ctx,argv[0],buf))
-		fprintf(stderr, "Failed to load test_module %s\n");
+		fprintf(stderr, "Failed to load test_module %s\n", argv[0]);
 }
