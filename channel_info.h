@@ -1,7 +1,11 @@
 #ifndef CHANNEL_INFO_H
 #define CHANNEL_INFO_H
 
+struct channel_info;
 #include <pcap.h>
+
+#include "context.h"
+#include "test_module.h"
 
 typedef struct channel_info {
 	char * dev;
@@ -13,5 +17,6 @@ typedef struct channel_info {
 } channel_info;
 
 int channel_info_init(struct channel_info * channel, char * dev);
+void setup_channel(struct oflops_context *ctx, struct test_module *mod, enum oflops_channel_name ch);
 
 #endif

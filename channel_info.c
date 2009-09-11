@@ -1,4 +1,8 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <arpa/inet.h>
 
@@ -35,4 +39,86 @@ int channel_info_init(struct channel_info * channel, char * dev)
 	channel->ifindex = ifr.ifr_ifindex;
 	close(dumb);
 	return 0;
+}
+
+/****************************************************
+ * query module if they want pcap and set it up for them if yes
+ * also create a raw_socket bound to each device if we have the
+ * device set
+ */
+
+
+void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch )
+{
+	char buf[BUFLEN];
+	char errbuf[PCAP_ERRBUF_SIZE];
+	struct bpf_program filter;
+	bpf_u_int32 mask=0, net=0;
+
+	channel_info *ch_info = &ctx->channels[ch];	
+
+	bzero(&filter, sizeof(filter));
+
+	if(ch_info->dev==NULL)	// no device specified
+	{
+		ch_info->dev = pcap_lookupdev(errbuf);
+		fprintf(stderr,"%s channel %i not configured; guessing device: ",
+				((ch==OFLOPS_CONTROL)?"Control":"Data"), ch);
+		if(ch_info->dev)
+			fprintf(stderr,"%s",ch_info->dev);
+		else
+		{
+			fprintf(stderr, " pcap_lookup() failed: %s ; exiting....\n", errbuf);
+			exit(1);
+		}
+	}
+
+	// setup pcap filter, if wanted
+	if( mod->get_pcap_filter(ctx,ch,buf,BUFLEN) <=0)
+	{
+		fprintf(stderr, "Test %s:  No pcap filter for channel %d on %s\n",
+				mod->name(), ch, ch_info->dev);
+		ch_info->pcap=NULL;
+		return;
+	}
+	assert(ch_info->dev);		// need to have someting here
+	fprintf(stderr,"Test %s:  Starting pcap filter \"%s\" on dev %s for channel %d\n",
+			mod->name(), buf, ch_info->dev, ch);
+	errbuf[0]=0;
+	ch_info->pcap = pcap_open_live(
+					ch_info->dev,
+					ctx->snaplen,
+					1, 	// promisc
+					0, 	// read timeout (ms)
+					errbuf	// for error messages
+			);
+	if(!ch_info->pcap)
+	{
+		fprintf( stderr, "pcap_open_live failed: %s\n",errbuf);
+		exit(1);
+	}
+	if(strlen(errbuf)>0)
+		fprintf( stderr, "Non-fatal pcap warning: %s\n", errbuf);
+	if((pcap_lookupnet(ch_info->dev,&net,&mask,errbuf) == -1) &&
+			(ch == OFLOPS_CONTROL)) 	// only control has an IP
+	{
+		fprintf(stderr,"WARN: pcap_lookupnet: %s; ",errbuf);
+		fprintf(stderr,"filter rules might fail\n");
+	}
+
+	if(pcap_compile(ch_info->pcap, &filter, buf, 1, net))
+	{
+		fprintf( stderr, "pcap_compile: %s\n", errbuf);
+		exit(1);
+	}
+
+	if(pcap_setfilter(ch_info->pcap,&filter ) == -1)
+	{
+		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
+		exit(1);
+	}
+	ch_info->pcap_fd = pcap_fileno(ch_info->pcap);
+	if(pcap_setnonblock(ch_info->pcap, 1, errbuf))
+		fprintf(stderr,"setup_channel: pcap_setnonblock(): %s\n",errbuf);
+
 }
