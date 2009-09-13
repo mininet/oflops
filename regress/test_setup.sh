@@ -31,10 +31,10 @@ for p in 0 1 2 3 4 5 ; do
 	ifconfig veth$p up
 done
 
-ifconfig veth0 $prefix.1 broadcast $prefix.255
-ifconfig veth1 $prefix.2 broadcast $prefix.255
+#ifconfig veth0 $prefix.2 broadcast $prefix.255
+ifconfig veth1 $prefix.1 broadcast $prefix.255
 
 # wait for IPv6 stupiditiy to subside
 sleep $sleeptime
-switch -iveth2,veth4 -d 010203040506 --max-backoff=1 tcp:$prefix.1:$port
+switch -iveth2,veth4 -d 010203040506 --max-backoff=1 tcp:127.0.0.1:$port
 

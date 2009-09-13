@@ -57,7 +57,6 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 
 	channel_info *ch_info = &ctx->channels[ch];	
 
-	bzero(&filter, sizeof(filter));
 
 	if(ch_info->dev==NULL)	// no device specified
 	{
@@ -106,19 +105,22 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 		fprintf(stderr,"filter rules might fail\n");
 	}
 
+	bzero(&filter, sizeof(filter));
 	if(pcap_compile(ch_info->pcap, &filter, buf, 1, net))
 	{
 		fprintf( stderr, "pcap_compile: %s\n", errbuf);
 		exit(1);
 	}
+	if(strlen(errbuf)>0)
+		fprintf( stderr, "Non-fatal pcap_setfilter: %s\n", errbuf);
 
 	if(pcap_setfilter(ch_info->pcap,&filter ) == -1)
 	{
 		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
 		exit(1);
 	}
-	ch_info->pcap_fd = pcap_fileno(ch_info->pcap);
 	if(pcap_setnonblock(ch_info->pcap, 1, errbuf))
 		fprintf(stderr,"setup_channel: pcap_setnonblock(): %s\n",errbuf);
+	ch_info->pcap_fd = pcap_fileno(ch_info->pcap);
 
 }
