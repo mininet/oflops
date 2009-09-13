@@ -217,6 +217,12 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
 	if (count == 0)
 		return;
+	if (count < 0)
+	{
+		fprintf(stderr,"process_pcap_event:pcap_dispatch returned %d :: %s \n", count,
+				pcap_geterr(ctx->channels[ch].pcap));
+		return;
+	}
 	// dispatch it to the test module
 	mod->handle_pcap_event(ctx, wrap.pe, ch);
 	// clean up our mess
