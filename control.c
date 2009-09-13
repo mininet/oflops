@@ -1,12 +1,21 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <arpa/inet.h>
 
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+
+#include <netinet/in.h>
+#include <linux/if_arp.h>
+#include <linux/if_ether.h>
+#include <linux/if_packet.h>
+
 
 #include <netinet/in.h>
 
@@ -16,10 +25,12 @@
 int setup_control_channel(oflops_context *ctx)
 {
 	struct sockaddr_in sin;
+	struct sockaddr_in *sinptr;
 	char buf[BUFLEN];
 	unsigned int len;
 	long flags;
 	int one;
+	struct ifreq ifr;
 
 
 	fprintf(stderr, "Creating server socket...\n");
@@ -31,9 +42,15 @@ int setup_control_channel(oflops_context *ctx)
 	one =1;
 	if(setsockopt(ctx->listen_fd,SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)))
 		perror_and_exit("Dying on setsockopt(SO_REUSEADDR)\n",1);
+	assert(ctx->channels[OFLOPS_CONTROL].dev);
+	strncpy(ifr.ifr_name,ctx->channels[OFLOPS_CONTROL].dev,IFNAMSIZ);
+	if( ioctl( ctx->listen_fd, SIOCGIFADDR, &ifr)  == -1 )
+		perror_and_exit("ioctl() SIOCGIFADDR to dev",1);
+	sinptr = (struct sockaddr_in *) & ifr.ifr_addr;	// convenience pointer
+
 
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = INADDR_ANY;
+	sin.sin_addr =  sinptr->sin_addr;	// bind to the specific device
 	sin.sin_port = htons(ctx->listen_port);
 	fprintf(stderr, "Binding to port %d \n", ctx->listen_port);
 	if(bind( ctx->listen_fd, (struct sockaddr *) &sin, sizeof(sin)))
