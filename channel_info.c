@@ -121,6 +121,6 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 	}
 	if(pcap_setnonblock(ch_info->pcap, 1, errbuf))
 		fprintf(stderr,"setup_channel: pcap_setnonblock(): %s\n",errbuf);
-	ch_info->pcap_fd = pcap_fileno(ch_info->pcap);
+	ch_info->pcap_fd = pcap_get_selectable_fd(ch_info->pcap);
 
 }
