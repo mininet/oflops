@@ -5,7 +5,8 @@ OFSRC=@openflowsrc@
 CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow 
 LDFLAGS+=-L$(OFSRC)/lib 
 
-LDADD=-ldl -lpcap -loflops_test -lefence
+LDADD=-ldl -lpcap -loflops_test 
+#LDADD+=-lefence
 
 
 bin_PROGRAMS=oflops
