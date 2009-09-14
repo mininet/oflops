@@ -30,7 +30,7 @@ typedef struct test_module
 {
 	// Return the name of the module
 	//
-	// DEFAULT: use the filename of the module
+	// DEFAULT: NONE! must be defined
 	//
 	// str returnned is static; don't free()
 	const char * (*name)(void);
