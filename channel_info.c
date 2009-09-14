@@ -77,21 +77,21 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 	{
 		fprintf(stderr, "Test %s:  No pcap filter for channel %d on %s\n",
 				mod->name(), ch, ch_info->dev);
-		ch_info->pcap=NULL;
+		ch_info->pcap_handle=NULL;
 		return;
 	}
 	assert(ch_info->dev);		// need to have someting here
 	fprintf(stderr,"Test %s:  Starting pcap filter \"%s\" on dev %s for channel %d\n",
 			mod->name(), buf, ch_info->dev, ch);
 	errbuf[0]=0;
-	ch_info->pcap = pcap_open_live(
+	ch_info->pcap_handle = pcap_open_live(
 					ch_info->dev,
 					ctx->snaplen,
 					1, 	// promisc
 					0, 	// read timeout (ms)
 					errbuf	// for error messages
 			);
-	if(!ch_info->pcap)
+	if(!ch_info->pcap_handle)
 	{
 		fprintf( stderr, "pcap_open_live failed: %s\n",errbuf);
 		exit(1);
@@ -106,7 +106,7 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 	}
 
 	bzero(&filter, sizeof(filter));
-	if(pcap_compile(ch_info->pcap, &filter, buf, 1, net))
+	if(pcap_compile(ch_info->pcap_handle, &filter, buf, 1, net))
 	{
 		fprintf( stderr, "pcap_compile: %s\n", errbuf);
 		exit(1);
@@ -114,13 +114,13 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 	if(strlen(errbuf)>0)
 		fprintf( stderr, "Non-fatal pcap_setfilter: %s\n", errbuf);
 
-	if(pcap_setfilter(ch_info->pcap,&filter ) == -1)
+	if(pcap_setfilter(ch_info->pcap_handle,&filter ) == -1)
 	{
 		fprintf(stderr,"pcap_setfilter: %s\n",errbuf);
 		exit(1);
 	}
-	if(pcap_setnonblock(ch_info->pcap, 1, errbuf))
+	if(pcap_setnonblock(ch_info->pcap_handle, 1, errbuf))
 		fprintf(stderr,"setup_channel: pcap_setnonblock(): %s\n",errbuf);
-	ch_info->pcap_fd = pcap_get_selectable_fd(ch_info->pcap);
+	ch_info->pcap_fd = pcap_get_selectable_fd(ch_info->pcap_handle);
 
 }

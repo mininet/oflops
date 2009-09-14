@@ -71,7 +71,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 
 		for(ch=0; ch< ctx->n_channels; ch++)
 		{
-			if( ctx->channels[ch].pcap)
+			if( ctx->channels[ch].pcap_handle)
 			{
 				poll_set[ch].fd = ctx->channels[ch].pcap_fd;
 				poll_set[ch].events = POLLIN;
@@ -214,13 +214,14 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 	int count;
 
 	// read the next packet from the appropriate pcap socket
-	count = pcap_dispatch(ctx->channels[ch].pcap, 1, oflops_pcap_handler, (u_char *) & wrap);
+	assert(ctx->channels[ch].pcap_handle);
+	count = pcap_dispatch(ctx->channels[ch].pcap_handle, 1, oflops_pcap_handler, (u_char *) & wrap);
 	if (count == 0)
 		return;
 	if (count < 0)
 	{
 		fprintf(stderr,"process_pcap_event:pcap_dispatch returned %d :: %s \n", count,
-				pcap_geterr(ctx->channels[ch].pcap));
+				pcap_geterr(ctx->channels[ch].pcap_handle));
 		return;
 	}
 	// dispatch it to the test module

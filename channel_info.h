@@ -9,7 +9,7 @@ struct channel_info;
 
 typedef struct channel_info {
 	char * dev;
-	pcap_t * pcap;
+	pcap_t * pcap_handle;
 	int pcap_fd;	// fd for pcap filter
 	int raw_sock;	// raw ethernet access fd
 	int sock;	// UDP socket
