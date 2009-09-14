@@ -1,3 +1,20 @@
 1) Handle exceptions on control channel (RST, etc.)
 2) Buffer control channel messages in case of partial send
 3) init raw_sock 
+
+Modules to write for paper:
+----------------------------
+1)  test how many packet_in's per second a switch can handle
+	for i = 1,2,4,...2000 packets per second :: regulated + unregulated
+		see what fraction get through
+2)  test to meassure throughput
+	- tcp friendly
+	- tcp unfriendly
+
+Modules to write after paper:
+-----------------------------
+1) time from packet sent to packet_in recv'd
+	for i=1,2,4... regulated and unregulated
+2) time from flow_mod sent to buffer'd packet released
+	for i=1,2,4... regulated and unregulated
+3) same as #2, but with packet_out
