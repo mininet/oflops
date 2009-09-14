@@ -95,7 +95,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
 	if(ofc == OFLOPS_CONTROL)	// only pcap dump the control channel
-		return snprintf(filter,buflen,"port 6633");
+		return snprintf(filter,buflen,"tcp port 6633");
 	else 
 		return 0;
 }
