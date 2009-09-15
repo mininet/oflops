@@ -8,6 +8,8 @@ LDFLAGS+=-L$(OFSRC)/lib
 LDADD=-ldl -lpcap -loflops_test 
 #LDADD+=-lefence
 
+EXTRA_DIST=./doc
+
 
 bin_PROGRAMS=oflops
 lib_LTLIBRARIES=liboflops_test.la
@@ -28,6 +30,10 @@ oflops_SOURCES= \
 liboflops_test_la_SOURCES= test_module.h  test_module.c
 
 SUBDIRS = example_modules
+
+docs: 
+	cd doc  && doxygen doc.cfg
+	@echo Generated HTML and Latex docs under ./doc
 
 count: 
 	@wc -l $(oflops_SOURCES) | sort -n

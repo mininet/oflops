@@ -34,7 +34,7 @@ static void parse_test_module(oflops_context * ctx, int argc, char * argv[]);
 /*****************************************************************************
  * int parse_args(oflops_context * ctx, int argc, char * argv[])
  * 	
- */
+ **/
 
 int parse_args(oflops_context * ctx, int argc, char * argv[])
 {
@@ -86,7 +86,7 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 
 /****************************************************************************
  * static char * make_short_from_long(struct option long_options[]);
- */
+ **/
 static char * make_short_from_long(struct option long_options[])
 {
 	static char buf[BUFLEN];
@@ -107,7 +107,7 @@ static char * make_short_from_long(struct option long_options[])
 /***************************************************************
  * void usage(char * s1, char *s2);
  * 	print usage information and exit
- */
+ **/
 void usage(char * s1, char *s2)
 {
 	struct option * o;
@@ -139,7 +139,7 @@ void usage(char * s1, char *s2)
 /**************************************************************************
  * static void parse_test_module(oflops_context * ctx, int argc, char * argv[]);
  * 	parse a test module from argc/argv and try loading it
- */
+ **/
 static void parse_test_module(oflops_context * ctx, int argc, char * argv[])
 {
 	char buf[BUFLEN];
