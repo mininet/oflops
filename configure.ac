@@ -60,6 +60,7 @@ AC_CHECK_FUNCS([strerror])
 AC_CONFIG_FILES([Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
+		example_modules/openflow_packet_in/Makefile \
 		])
 
 AC_OUTPUT

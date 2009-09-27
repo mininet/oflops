@@ -1,1 +1,2 @@
-SUBDIRS = oflops_debug
+SUBDIRS = oflops_debug openflow_packet_in
+
