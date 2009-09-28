@@ -6,6 +6,7 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include <arpa/inet.h>
 
@@ -15,11 +16,12 @@
 #define BUFLEN 4096
 #endif
 
-#define PACKET_IN_DEBUG 1
+#define PACKET_IN_DEBUG 0
 
 /** Interval to send packet
  */
-#define SEND_INTERVAL 500000
+#define SEND_INTERVAL 100000
+//#define SEND_INTERVAL 2000
 
 /** String for scheduling events
  */
@@ -42,6 +44,19 @@ struct timeval sendtime;
 /** Receive time
  */
 struct timeval receivetime;
+/** Receive toggle
+ */
+int newreceivetime = 0;
+
+/** Send counter
+ */
+uint32_t sendcounter = 0;
+/** Receive counter
+ */
+uint32_t receivecounter = 0;
+/** Total delay
+ */
+uint64_t totaldelay = 0;
 
 /** Packet in module.
  * The module sends packet into a port to generate packet-in events.
@@ -104,7 +119,6 @@ int start(struct oflops_context * ctx)
  */
 int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 {
-  static uint32_t i=0;
   //struct ether_header  * eth = (struct ether_header * ) buf;
   int err;
   struct timeval now;
@@ -119,20 +133,22 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
   if(!strcmp(str,WRITEPACKET))
   {
     //Send message
-    sprintf(&buf[sizeof(struct ether_header)],"%i",i);
+    sprintf(&buf[sizeof(struct ether_header)],"%u",sendcounter);
     if (PACKET_IN_DEBUG)
-      fprintf(stderr, "Sending message %u\n", i);
+      fprintf(stderr, "Sending message %u\n", sendcounter);
     err = oflops_send_raw_mesg(ctx,OFLOPS_DATA1,buf,len);
     if(err < 0)
       perror("write");
     //Schedule next one
-    i++;
+    sendcounter++;
     now.tv_usec += SEND_INTERVAL;	
     oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   }
   else if(!strcmp(str,BYESTR))
   {
     //End experiment
+    fprintf(stderr, "Experiment has %u packets sent and %u received with average delay of %e us.\n", 
+	    sendcounter, receivecounter, ((double) totaldelay)/((double) receivecounter));
     oflops_end_test(ctx);
   }
   else
@@ -146,7 +162,31 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
  */
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
-  fprintf(stderr, "Got an of_packet_in event on port %d\n", ntohs(pkt_in->in_port));
+  //Check receive sequence
+  uint32_t receiveno = (uint32_t) atoi(&(pkt_in->data)[sizeof(struct ether_header)]);
+  receivecounter++;
+  if (receiveno != sendno)
+    perror("Send time and receive time not valid!");
+  if (!newreceivetime)
+    perror("pcap failed for packet in!");
+
+  //Calculate time difference
+  struct timeval timediff;
+  timersub(&receivetime, &sendtime, &timediff);
+  if (timediff.tv_sec != 0)
+    perror("Delay of > 1 sec!");
+  totaldelay += (uint64_t) timediff.tv_usec;
+  newreceivetime = 0;
+
+  if (PACKET_IN_DEBUG)
+  {
+    fprintf(stderr, "Got an of_packet_in event for seq %u on port %d with delay %ld.%.6ld\n", 
+	    receiveno, ntohs(pkt_in->in_port),
+	    timediff.tv_sec, timediff.tv_usec);
+    fprintf(stderr, "\twith %u packets sent and %u received.\n", 
+	    sendcounter, receivecounter);
+  }
+
   return 0;
 }
 
@@ -174,10 +214,9 @@ int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * 
  */
 int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
 {
-  struct timeval now;
-  gettimeofday(&now, NULL);
   if (ch == OFLOPS_DATA1)
   {
+    //See packet sent
     sendno = (uint32_t) atoi(&(pe->data)[sizeof(struct ether_header)]);
     sendtime = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
@@ -188,13 +227,15 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   }
   else if (ch == OFLOPS_CONTROL)
   {
+    //See packet received
     receivetime = pe->pcaphdr.ts;
+    newreceivetime = 1;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got OpenFlow packet at %ld.%.6ld\n", 
 	      receivetime.tv_sec, receivetime.tv_usec);
   }
   else
-    perror("wtf!  why this channel?");
+    perror("wtf! why this channel?");
 
   return 0;
 }

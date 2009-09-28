@@ -1,6 +1,7 @@
 #!/bin/sh
 
-export PATH=/home/$USER/mine.of/bin:$PATH
+#export PATH=/home/$USER/mine.of/bin:$PATH
+export PATH=/home/ykk/openflow/openflow/switch:$PATH
 prefix=192.168.250
 port=6633
 sleeptime=0
