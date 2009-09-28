@@ -163,7 +163,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
   //Check receive sequence
-  uint32_t receiveno = (uint32_t) atoi(&(pkt_in->data)[sizeof(struct ether_header)]);
+  uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)]);
   receivecounter++;
   if (receiveno != sendno)
     perror("Send time and receive time not valid!");
@@ -217,7 +217,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   if (ch == OFLOPS_DATA1)
   {
     //See packet sent
-    sendno = (uint32_t) atoi(&(pe->data)[sizeof(struct ether_header)]);
+    sendno = (uint32_t) atoi((char *)&(pe->data)[sizeof(struct ether_header)]);
     sendtime = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got data packet of length %u (seq %u) at %ld.%.6ld\n",
