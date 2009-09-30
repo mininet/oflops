@@ -18,12 +18,13 @@
 #define BUFLEN 4096
 #endif
 
-#define PACKET_IN_DEBUG 1
+#define PACKET_IN_DEBUG 0
 
 /** Interval to send packet
  */
-#define SEND_INTERVAL 500000
+//#define SEND_INTERVAL 500000
 //#define SEND_INTERVAL 2000
+#define SEND_INTERVAL 500000
 
 /** String for scheduling events
  */
@@ -36,6 +37,10 @@ int len;
 /** Packet buffer
  */
 char buf[BUFLEN];
+
+/** Start time
+ */
+struct timeval starttime;
 
 /** Send sequence
  */
@@ -52,10 +57,10 @@ uint32_t pcapreceiveseq = 0;
 
 /** Send counter
  */
-uint32_t sendcounter = 0;
+uint64_t sendcounter = 0;
 /** Receive counter
  */
-uint32_t receivecounter = 0;
+uint64_t receivecounter = 0;
 /** Total delay
  */
 uint64_t totaldelay = 0;
@@ -86,11 +91,11 @@ int start(struct oflops_context * ctx)
   gettimeofday(&now, NULL);
 
   //Schedule start
-  now.tv_sec +=1;	
+  now.tv_sec +=5;	
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end
-  now.tv_sec += 4;	// 5 secs on the future, stop this module
+  now.tv_sec += 120;	// 2 mins on the future, stop this module
   oflops_schedule_timer_event(ctx,&now, BYESTR);
 
   // send a friendly hello
@@ -135,9 +140,14 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
   if(!strcmp(str,WRITEPACKET))
   {
     //Send message
-    sprintf(&buf[sizeof(struct ether_header)],"%u",sendcounter);
+    if (sendcounter == 0)
+    {
+      gettimeofday(&starttime, NULL);
+      fprintf(stderr, "Start...\n");
+    }
+    sprintf(&buf[sizeof(struct ether_header)],"%u",(uint32_t) sendcounter);
     if (PACKET_IN_DEBUG)
-      fprintf(stderr, "Sending message %u\n", sendcounter);
+      fprintf(stderr, "Sending message %lld\n", sendcounter);
     err = oflops_send_raw_mesg(ctx,OFLOPS_DATA1,buf,len);
     if(err < 0)
       perror("write");
@@ -149,8 +159,9 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
   else if(!strcmp(str,BYESTR))
   {
     //End experiment
-    fprintf(stderr, "Experiment has %u packets sent and %u received with average delay of %e us.\n", 
-	    sendcounter, receivecounter, ((double) totaldelay)/((double) receivecounter));
+    fprintf(stderr, "Experiment has %lld packets sent (rate %f) and %lld received with average delay of %f us.\n", 
+	    sendcounter,(float) (((double) sendcounter)/((double) (now.tv_sec - starttime.tv_sec))),
+	    receivecounter, ((float) ((double) totaldelay)/((double) receivecounter)));
     oflops_end_test(ctx);
   }
   else
@@ -190,7 +201,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
     fprintf(stderr, "Got an of_packet_in event for seq %u on port %d with delay %ld.%.6ld\n", 
 	    receiveno, ntohs(pkt_in->in_port),
 	    timediff.tv_sec, timediff.tv_usec);
-    fprintf(stderr, "\twith %u packets sent and %u received.\n", 
+    fprintf(stderr, "\twith %lld packets sent and %lld received.\n", 
 	    sendcounter, receivecounter);
   }
 
