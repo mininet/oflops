@@ -61,6 +61,7 @@ AC_CONFIG_FILES([Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
 		example_modules/openflow_packet_in/Makefile \
+		example_modules/openflow_port_status/Makefile \
 		])
 
 AC_OUTPUT
