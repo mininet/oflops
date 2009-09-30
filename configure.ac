@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
+AC_PREREQ([2.59])
 AC_INIT([oflops], [0.01], [rob.sherwood@stanford.edu])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([.])
