@@ -9,6 +9,8 @@
 #include <sys/time.h>
 
 #include <arpa/inet.h>
+#include <linux/ip.h>
+#include <linux/tcp.h>
 
 #include <test_module.h>
 
@@ -16,11 +18,11 @@
 #define BUFLEN 4096
 #endif
 
-#define PACKET_IN_DEBUG 0
+#define PACKET_IN_DEBUG 1
 
 /** Interval to send packet
  */
-#define SEND_INTERVAL 100000
+#define SEND_INTERVAL 500000
 //#define SEND_INTERVAL 2000
 
 /** String for scheduling events
@@ -46,7 +48,7 @@ struct timeval sendtime;
 struct timeval receivetime;
 /** Receive toggle
  */
-int newreceivetime = 0;
+uint32_t pcapreceiveseq = 0;
 
 /** Send counter
  */
@@ -166,9 +168,15 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
   uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)]);
   receivecounter++;
   if (receiveno != sendno)
+  {
     perror("Send time and receive time not valid!");
-  if (!newreceivetime)
-    perror("pcap failed for packet in!");
+    return 0;
+  }
+  if (pcapreceiveseq != receiveno)
+  {
+    perror("OpenFlow packet's capture time is lost!");
+    return 0;
+  }
 
   //Calculate time difference
   struct timeval timediff;
@@ -176,7 +184,6 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
   if (timediff.tv_sec != 0)
     perror("Delay of > 1 sec!");
   totaldelay += (uint64_t) timediff.tv_usec;
-  newreceivetime = 0;
 
   if (PACKET_IN_DEBUG)
   {
@@ -199,7 +206,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
   if(ofc == OFLOPS_CONTROL)	// pcap dump the control channel
-    return snprintf(filter,buflen,"tcp port 6633");
+    return snprintf(filter,buflen,"tcp dst port 6633");
   else if(ofc == OFLOPS_DATA1)	// pcap dump data channel 1
     return snprintf(filter,buflen," ");
   else 
@@ -229,10 +236,12 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   {
     //See packet received
     receivetime = pe->pcaphdr.ts;
-    newreceivetime = 1;
+    pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[98]);
     if (PACKET_IN_DEBUG)
-      fprintf(stderr, "Got OpenFlow packet at %ld.%.6ld\n", 
-	      receivetime.tv_sec, receivetime.tv_usec);
+      fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
+	      pe->pcaphdr.len,
+	      receivetime.tv_sec, receivetime.tv_usec, 
+	      pcapreceiveseq);
   }
   else
     perror("wtf! why this channel?");
