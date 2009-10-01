@@ -24,12 +24,16 @@
  */
 //#define SEND_INTERVAL 500000
 //#define SEND_INTERVAL 2000
-#define SEND_INTERVAL 500000
+#define SEND_INTERVAL 5000
 
 /** String for scheduling events
  */
 #define BYESTR "bye bye"
 #define WRITEPACKET "write packet"
+
+/** Experiment Ethertype
+ */
+#define EXPT_ET 12345
 
 /** Packet length
  */
@@ -95,7 +99,7 @@ int start(struct oflops_context * ctx)
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end
-  now.tv_sec += 120;	// 2 mins on the future, stop this module
+  now.tv_sec += 60;	// 1 min on the future, stop this module
   oflops_schedule_timer_event(ctx,&now, BYESTR);
 
   // send a friendly hello
@@ -115,7 +119,7 @@ int start(struct oflops_context * ctx)
   bzero(buf,BUFLEN);
   eth->ether_dhost[5]=2;
   eth->ether_shost[5]=1;
-  eth->ether_type = htons(12345);
+  eth->ether_type = htons(EXPT_ET);
 
   return 0;
 }
@@ -159,9 +163,13 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
   else if(!strcmp(str,BYESTR))
   {
     //End experiment
-    fprintf(stderr, "Experiment has %lld packets sent (rate %f) and %lld received with average delay of %f us.\n", 
-	    sendcounter,(float) (((double) sendcounter)/((double) (now.tv_sec - starttime.tv_sec))),
-	    receivecounter, ((float) ((double) totaldelay)/((double) receivecounter)));
+    fprintf(stderr, "Experiment has %lld packets sent (rate %f) and %lld received",
+	    sendcounter,
+	    (float) (((double) sendcounter)/((double) (now.tv_sec - starttime.tv_sec))),
+	    receivecounter);
+    fprintf(stderr, " (i.e., loss = %lld) with average delay of %f us.\n", 
+	    (receivecounter-sendcounter),
+	    ((float) ((double) totaldelay)/((double) receivecounter)));
     oflops_end_test(ctx);
   }
   else
@@ -177,10 +185,10 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 {
   //Check receive sequence
   uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)]);
-  receivecounter++;
+  uint16_t et = ntohs(*((uint16_t *) &(pkt_in->data)[sizeof(struct ether_header)-2]));
   if (receiveno != sendno)
   {
-    fprintf(stderr, "Send sequence %u and receive sequence %u not the same valid!\n", 
+    fprintf(stderr, "Send sequence %u and receive sequence %u not the same => invalid!\n", 
 	    sendno, receiveno);
     return 0;
   }
@@ -191,6 +199,12 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 	    pcapreceiveseq, receiveno);
     return 0;
   }
+  if (et != EXPT_ET)
+  {
+    fprintf(stderr, "Ether type %u received != %u sent\n", 
+	    et, EXPT_ET);
+    return 0;
+  }  
 
   //Calculate time difference
   struct timeval timediff;
@@ -198,6 +212,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
   if (timediff.tv_sec != 0)
     fprintf(stderr, "Delay of > 1 sec!");
   totaldelay += (uint64_t) timediff.tv_usec;
+  receivecounter++;
 
   if (PACKET_IN_DEBUG)
   {
