@@ -2,38 +2,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <net/ethernet.h>
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
 #include <arpa/inet.h>
-#include <linux/ip.h>
-#include <linux/tcp.h>
 
 #include <test_module.h>
 
-#ifndef BUFLEN
-#define BUFLEN 4096
-#endif
-
-#define PACKET_IN_DEBUG 1
+#define PACKET_IN_DEBUG 0
 
 /** Interval to send packet
  */
-//#define SEND_INTERVAL 500000
-//#define SEND_INTERVAL 2000
-#define SEND_INTERVAL 500000
+//#define MIN_SEND_INTERVAL 500000
+//#define MIN_SEND_INTERVAL 2000
+#define MIN_SEND_INTERVAL 2000
 
 /** String for scheduling events
  */
 #define BYESTR "bye bye"
 #define WRITEPACKET "write packet"
-
-/** Experiment Ethertype
- */
-#define EXPT_ET 12345
 
 /** OpenFlow packet buffer
  */
@@ -43,18 +31,15 @@ struct ofp_stats_request buf;
  */
 struct timeval starttime;
 
-/** Send sequence
+/** Sending.
  */
-uint32_t sendno;
+int sending = 0;
+/** Send xid
+ */
+uint32_t sendxid;
 /** Send time
  */
 struct timeval sendtime;
-/** Receive time
- */
-struct timeval receivetime;
-/** Receive toggle
- */
-uint32_t pcapreceivexid = 0;
 
 /** Send counter
  */
@@ -97,14 +82,14 @@ int start(struct oflops_context * ctx)
   gettimeofday(&now, NULL);
 
   //Open delay file
-  delayfile = fopen("delayfile", "w");
+  delayfile = fopen("statdelayfile", "w");
 
   //Schedule start
   now.tv_sec +=5;	
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end
-  now.tv_sec += 50;	// 1 min on the future, stop this module
+  now.tv_sec += 5;	// 1 min on the future, stop this module
   oflops_schedule_timer_event(ctx,&now, BYESTR);
 
   // send a friendly hello
@@ -155,19 +140,23 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
       gettimeofday(&starttime, NULL);
       fprintf(stderr, "Start...\n");
     }
-    buf.header.xid = (uint32_t) sendcounter;
-    if (PACKET_IN_DEBUG)
-      fprintf(stderr, "Sending message %lld\n", sendcounter);
-    oflops_send_of_mesg(ctx,(struct ofp_header *) &buf);
+    if (!sending)
+    {
+      buf.header.xid = htonl((uint32_t) sendcounter);
+      if (PACKET_IN_DEBUG)
+	fprintf(stderr, "Sending message %lld\n", sendcounter);
+      oflops_send_of_mesg(ctx,(struct ofp_header *) &buf);
+    }
 
     //Schedule next one
-    sendcounter++;
-    now.tv_usec += SEND_INTERVAL;	
+    now.tv_usec += MIN_SEND_INTERVAL;	
     oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   }
   else if(!strcmp(str,BYESTR))
   {
     //End experiment
+    if (sending)
+      sendcounter--;
     fprintf(stderr, "Experiment has %lld packets sent (rate %f) and %lld received",
 	    sendcounter,
 	    (float) (((double) sendcounter)/((double) (now.tv_sec - starttime.tv_sec))),
@@ -189,57 +178,6 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
  */
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
-  //Check receive sequence
-  uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)]);
-  uint16_t et = ntohs(*((uint16_t *) &(pkt_in->data)[sizeof(struct ether_header)-2]));
-  if (et != EXPT_ET)
-  {
-    fprintf(stderr, "Ether type %u received != %u sent\n", 
-	    et, EXPT_ET);
-    return 0;
-  }  
-  if (receiveno > sendno)
-  {
-    fprintf(stderr, "Send sequence %u < receive sequence %u => wtf!\n", 
-	    sendno, receiveno);
-    return 0;
-  }
-  receivecounter++;
-  if (receiveno < sendno)
-  {
-    fprintf(stderr, "Send sequence %u > receive sequence %u => send time lost!\n", 
-	    sendno, receiveno);
-    return 0;
-  }
-  if (pcapreceivexid != receiveno)
-  {
-    fprintf(stderr, "OpenFlow packet's capture time is lost!");
-    fprintf(stderr, "With seq %u recorded and %u wanted.\n",
-	    pcapreceivexid, receiveno);
-    return 0;
-  }
-
-  //Calculate time difference
-  struct timeval timediff;
-  timersub(&receivetime, &sendtime, &timediff);
-  if (timediff.tv_sec != 0)
-  {
-    fprintf(stderr, "Delay of > 1 sec!");
-    return 0;
-  }
-  fprintf(delayfile, "%ld\n", timediff.tv_usec);
-  totaldelay += (uint64_t) timediff.tv_usec;
-  delaycounter++;
-
-  if (PACKET_IN_DEBUG)
-  {
-    fprintf(stderr, "Got an of_packet_in event for seq %u on port %d with delay %ld.%.6ld\n", 
-	    receiveno, ntohs(pkt_in->in_port),
-	    timediff.tv_sec, timediff.tv_usec);
-    fprintf(stderr, "\twith %lld packets sent and %lld received.\n", 
-	    sendcounter, receivecounter);
-  }
-
   return 0;
 }
 
@@ -268,14 +206,68 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   if (ch == OFLOPS_CONTROL)
   {
     //See packet received
-    receivetime = pe->pcaphdr.ts;
-    pcapreceivexid  = (uint32_t) atoi((char *)&(pe->data)[98]);
+    uint8_t type = pe->data[67];
+    struct timeval ptime = pe->pcaphdr.ts;
+    uint32_t xid  = ntohl(*((uint32_t*) &(pe->data)[70]));
     if (PACKET_IN_DEBUG)
-      fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
-	      pe->pcaphdr.len,
-	      receivetime.tv_sec, receivetime.tv_usec, 
-	      pcapreceivexid);
+      fprintf(stderr, "Got OpenFlow packet of length %u type %u at %ld.%.6ld of xid %u\n", 
+	      pe->pcaphdr.len, type,
+	      ptime.tv_sec, ptime.tv_usec, 
+	      xid);
+
+    //Handle stat request and stat reply
+    if (type == 16)
+    {
+      //Record sending
+      sending = 1;
+      sendtime = ptime;
+      sendxid = xid;
+      sendcounter++;
+      if (PACKET_IN_DEBUG)
+	fprintf(stderr, "Send stat request at %ld.%.6ld of xid %u\n", 
+		ptime.tv_sec, ptime.tv_usec, 
+		xid);
+    }
+    else if (type ==17)
+    {
+      sending = 0;
+      if (PACKET_IN_DEBUG)
+	fprintf(stderr, "Receive stat reply at %ld.%.6ld of xid %u\n", 
+		ptime.tv_sec, ptime.tv_usec, 
+		xid);
+
+      //Check xid
+      if (xid != sendxid)
+      {
+	fprintf(stderr, "Send xid %u and receive xid %u, wtf?!",
+		sendxid, xid);
+	return 0;
+      }
+
+      //Calculate time difference
+      struct timeval timediff;
+      timersub(&ptime, &sendtime, &timediff);
+      if (timediff.tv_sec != 0)
+      {
+	  fprintf(stderr, "Delay of > 1 sec!");
+	  return 0;
+      }
+      fprintf(delayfile, "%ld\n", timediff.tv_usec);
+      totaldelay += (uint64_t) timediff.tv_usec;
+      delaycounter++;      
+      receivecounter++;
+
+      if (PACKET_IN_DEBUG)
+      {
+	fprintf(stderr, "Got stat of xid %u with delay %ld.%.6ld\n", 
+	    xid,
+	    timediff.tv_sec, timediff.tv_usec);
+	fprintf(stderr, "\twith %lld packets sent and %lld received.\n", 
+		sendcounter, receivecounter);
+      }
+    }
   }
+
   else
     fprintf(stderr, "wtf! why channel %u?", ch);
 
