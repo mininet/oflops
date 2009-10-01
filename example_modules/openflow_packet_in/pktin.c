@@ -104,7 +104,7 @@ int start(struct oflops_context * ctx)
   delayfile = fopen("delayfile", "w");
 
   //Schedule start
-  now.tv_sec +=5;	
+  now.tv_sec +=10;	
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end

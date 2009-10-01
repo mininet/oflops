@@ -85,11 +85,11 @@ int start(struct oflops_context * ctx)
   delayfile = fopen("statdelayfile", "w");
 
   //Schedule start
-  now.tv_sec +=5;	
+  now.tv_sec +=10;	
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end
-  now.tv_sec += 5;	// 1 min on the future, stop this module
+  now.tv_sec += 60;	// 1 min on the future, stop this module
   oflops_schedule_timer_event(ctx,&now, BYESTR);
 
   // send a friendly hello
