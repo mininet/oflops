@@ -165,7 +165,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
     oflops_end_test(ctx);
   }
   else
-    perror("Unknown timer event");
+    fprintf(stderr, "Unknown timer event: %s", str);
   return 0;
 }
 
@@ -180,12 +180,15 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
   receivecounter++;
   if (receiveno != sendno)
   {
-    perror("Send time and receive time not valid!");
+    fprintf(stderr, "Send sequence %u and receive sequence %u not the same valid!\n", 
+	    sendno, receiveno);
     return 0;
   }
   if (pcapreceiveseq != receiveno)
   {
-    perror("OpenFlow packet's capture time is lost!");
+    fprintf(stderr, "OpenFlow packet's capture time is lost!");
+    fprintf(stderr, "With seq %u recorded and %u wanted.\n",
+	    pcapreceiveseq, receiveno);
     return 0;
   }
 
@@ -193,7 +196,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
   struct timeval timediff;
   timersub(&receivetime, &sendtime, &timediff);
   if (timediff.tv_sec != 0)
-    perror("Delay of > 1 sec!");
+    fprintf(stderr, "Delay of > 1 sec!");
   totaldelay += (uint64_t) timediff.tv_usec;
 
   if (PACKET_IN_DEBUG)
@@ -255,7 +258,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
 	      pcapreceiveseq);
   }
   else
-    perror("wtf! why this channel?");
+    fprintf(stderr, "wtf! why channel %u?", ch);
 
   return 0;
 }
