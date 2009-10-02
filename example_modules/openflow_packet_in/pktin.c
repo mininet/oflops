@@ -18,13 +18,16 @@
 #define BUFLEN 4096
 #endif
 
+//#define GET_NUMBER 10000
+#define GET_NUMBER 0
+
 #define PACKET_IN_DEBUG 0
 
 /** Interval to send packet
  */
 //#define SEND_INTERVAL 500000
 //#define SEND_INTERVAL 2000
-#define SEND_INTERVAL 10000
+#define SEND_INTERVAL 20000
 
 /** String for scheduling events
  */
@@ -51,7 +54,7 @@ struct timeval starttime;
 uint32_t sendno;
 /** Send time
  */
-struct timeval sendtime[256];
+struct timeval sendtime[65536];
 /** Receive time
  */
 struct timeval receivetime;
@@ -108,7 +111,7 @@ int start(struct oflops_context * ctx)
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
   
   //Schedule end
-  now.tv_sec += 60;	// 1 min on the future, stop this module
+  now.tv_sec += 120;	// 1 min on the future, stop this module
   oflops_schedule_timer_event(ctx,&now, BYESTR);
 
   // send a friendly hello
@@ -171,6 +174,16 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
   }
   else if(!strcmp(str,BYESTR))
   {
+    if (GET_NUMBER)
+      if (delaycounter < GET_NUMBER)
+      {
+	fprintf(stderr, "Received %lld\n", delaycounter);
+	gettimeofday(&now,NULL);
+	now.tv_sec++;
+	oflops_schedule_timer_event(ctx,&now, BYESTR);
+	return 0;
+      }
+	
     //End experiment
     fprintf(stderr, "Experiment has %lld packets sent (rate %f) and %lld received",
 	    sendcounter,
@@ -209,7 +222,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
     return 0;
   }
   receivecounter++;
-  if ((receiveno+256) < sendno)
+  if ((receiveno+65536) < sendno)
   {
     fprintf(stderr, "Send sequence %u > receive sequence %u => send time lost!\n", 
 	    sendno, receiveno);
@@ -225,7 +238,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 
   //Calculate time difference
   struct timeval timediff;
-  timersub(&receivetime, &(sendtime[((uint8_t) receiveno)]), &timediff);
+  timersub(&receivetime, &(sendtime[((uint16_t) receiveno)]), &timediff);
   /*  if (timediff.tv_sec != 0)
   {
     fprintf(stderr, "Delay of > %u sec!\n", timediff.tv_sec);
@@ -275,7 +288,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   {
     //See packet sent
     sendno = (uint32_t) atoi((char *)&(pe->data)[sizeof(struct ether_header)]);
-    sendtime[((uint8_t) sendno)] = pe->pcaphdr.ts;
+    sendtime[((uint16_t) sendno)] = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got data packet of length %u (seq %u) at %ld.%.6ld\n",
 	      pe->pcaphdr.caplen,
@@ -286,6 +299,9 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   {
     //See packet received
     receivetime = pe->pcaphdr.ts;
+    //FIXME: Value for NEC
+    //pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[86]);
+    //FIXME: Value for HP
     pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[98]);
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
