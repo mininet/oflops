@@ -51,7 +51,7 @@ struct timeval starttime;
 uint32_t sendno;
 /** Send time
  */
-struct timeval sendtime;
+struct timeval sendtime[256];
 /** Receive time
  */
 struct timeval receivetime;
@@ -67,7 +67,7 @@ uint64_t sendcounter = 0;
 uint64_t receivecounter = 0;
 /** Total delay
  */
-uint64_t totaldelay = 0;
+double totaldelay = 0;
 /** Delay packet counter
  */
 uint64_t delaycounter = 0;
@@ -178,7 +178,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 	    receivecounter);
     fprintf(stderr, " (i.e., loss = %lld) with average delay of %f us.\n", 
 	    (sendcounter-receivecounter),
-	    ((float) ((double) totaldelay)/((double) delaycounter)));
+	    ((float) (totaldelay/((double) delaycounter))));
     fclose(delayfile);
     oflops_end_test(ctx);
   }
@@ -209,7 +209,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
     return 0;
   }
   receivecounter++;
-  if (receiveno < sendno)
+  if ((receiveno+256) < sendno)
   {
     fprintf(stderr, "Send sequence %u > receive sequence %u => send time lost!\n", 
 	    sendno, receiveno);
@@ -225,14 +225,14 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 
   //Calculate time difference
   struct timeval timediff;
-  timersub(&receivetime, &sendtime, &timediff);
-  if (timediff.tv_sec != 0)
+  timersub(&receivetime, &(sendtime[((uint8_t) receiveno)]), &timediff);
+  /*  if (timediff.tv_sec != 0)
   {
-    fprintf(stderr, "Delay of > 1 sec!");
+    fprintf(stderr, "Delay of > %u sec!\n", timediff.tv_sec);
     return 0;
-  }
+    }*/
   fprintf(delayfile, "%ld\n", timediff.tv_usec);
-  totaldelay += (uint64_t) timediff.tv_usec;
+  totaldelay += ((double) timediff.tv_usec)+((double) timediff.tv_sec*10e6);
   delaycounter++;
 
   if (PACKET_IN_DEBUG)
@@ -275,7 +275,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   {
     //See packet sent
     sendno = (uint32_t) atoi((char *)&(pe->data)[sizeof(struct ether_header)]);
-    sendtime = pe->pcaphdr.ts;
+    sendtime[((uint8_t) sendno)] = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got data packet of length %u (seq %u) at %ld.%.6ld\n",
 	      pe->pcaphdr.caplen,
