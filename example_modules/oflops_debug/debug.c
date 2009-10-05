@@ -87,24 +87,9 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
-	fprintf(stderr, "Got an of_packet_in event on port %d\n", ntohs(pkt_in->in_port));
+	struct pcap_pkthdr hdr;
+	if( oflops_get_timestamp(ctx,pkt_in, ntohs(pkt_in->header.length), &hdr, OFLOPS_CONTROL))
+		fprintf(stderr, "Got an of_packet_in event on port %d :: ts=%ld.%.6ld\n", 
+				ntohs(pkt_in->in_port), hdr.ts.tv_sec, hdr.ts.tv_usec);
 	return 0;
 }
-
-
-int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
-{
-	if(ofc == OFLOPS_CONTROL)	// only pcap dump the control channel
-		return snprintf(filter,buflen,"tcp port 6633");
-	else 
-		return 0;
-}
-
-int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
-{
-	fprintf(stderr, "Got pcap_event\n");
-	return 0;
-}
-
-
-

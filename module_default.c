@@ -1,8 +1,9 @@
 #include <string.h>
 
 #include "module_default.h"
+#include "pcap_track.h"
 
-// Set of default operations for modules; just NOOPs
+// Set of default operations for modules; just NOOPs except for OFLOPS_CONTROL which we keep timestamps for
 
 int default_module_init(struct oflops_context *ctx, char * init)
 {
@@ -11,7 +12,10 @@ int default_module_init(struct oflops_context *ctx, char * init)
 
 int default_module_get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
-	return 0;
+	if(ofc == OFLOPS_CONTROL)       // only pcap dump the control channel
+		return snprintf(filter,buflen,"tcp port %d", ctx->listen_port);
+	else
+		return 0;
 }
 
 
@@ -23,7 +27,12 @@ int default_module_start(struct oflops_context * ctx)
 
 int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
 {
-	return 0;
+	if( ch != OFLOPS_CONTROL)
+		return 0;
+	if(!ctx->channels[OFLOPS_CONTROL].timestamps)
+		ctx->channels[OFLOPS_CONTROL].timestamps = ptrack_new();
+	// add this packet to the list of timestamps
+	ptrack_add_of_entry(ctx->channels[OFLOPS_CONTROL].timestamps, pe->data, pe->pcaphdr.caplen, pe->pcaphdr);
 }
 
 
