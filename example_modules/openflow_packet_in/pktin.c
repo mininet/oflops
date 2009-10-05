@@ -18,7 +18,6 @@
 #define BUFLEN 4096
 #endif
 
-//#define GET_NUMBER 10000
 #define GET_NUMBER 0
 
 #define PACKET_IN_DEBUG 0
@@ -27,12 +26,13 @@
  */
 //#define SEND_INTERVAL 500000
 //#define SEND_INTERVAL 2000
-#define SEND_INTERVAL 20000
+#define SEND_INTERVAL 40000
 
 /** String for scheduling events
  */
 #define BYESTR "bye bye"
 #define WRITEPACKET "write packet"
+#define PRINTCOUNT "print"
 
 /** Experiment Ethertype
  */
@@ -100,7 +100,6 @@ int start(struct oflops_context * ctx)
 {
   struct timeval now;
   struct ofp_header ofph;
-  struct  ether_header  * eth = (struct ether_header * ) buf;
   gettimeofday(&now, NULL);
 
   //Open delay file
@@ -109,6 +108,7 @@ int start(struct oflops_context * ctx)
   //Schedule start
   now.tv_sec +=10;	
   oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
+  oflops_schedule_timer_event(ctx,&now, PRINTCOUNT);
   
   //Schedule end
   now.tv_sec += 120;	// 1 min on the future, stop this module
@@ -127,12 +127,19 @@ int start(struct oflops_context * ctx)
   ofph.type = OFPT_FEATURES_REQUEST;
   ofph.version = OFP_VERSION;
   oflops_send_of_mesg(ctx,&ofph);
-  len =64;
+
+  //Pack packet
+  len=54;
   bzero(buf,BUFLEN);
+  struct  ether_header  * eth = (struct ether_header * ) buf;
   eth->ether_dhost[5]=2;
   eth->ether_shost[5]=1;
-  eth->ether_type = htons(EXPT_ET);
-
+  eth->ether_type = htons(0x0800);
+  struct iphdr * ip = (struct iphdr *) &buf[sizeof(struct ether_header)];
+  ip->protocol=1;
+  ip->ihl=5;
+  ip->version=5;
+  ip->tot_len=htons(40);
   return 0;
 }
 
@@ -161,7 +168,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
       gettimeofday(&starttime, NULL);
       fprintf(stderr, "Start...\n");
     }
-    sprintf(&buf[sizeof(struct ether_header)],"%u",(uint32_t) sendcounter);
+    sprintf(&buf[sizeof(struct ether_header)+sizeof(struct iphdr)],"%u",(uint32_t) sendcounter);
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Sending message %lld\n", sendcounter);
     err = oflops_send_raw_mesg(ctx,OFLOPS_DATA1,buf,len);
@@ -171,6 +178,14 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
     sendcounter++;
     now.tv_usec += SEND_INTERVAL;	
     oflops_schedule_timer_event(ctx,&now, WRITEPACKET);
+  }
+  else if(!strcmp(str,PRINTCOUNT))
+  {
+    fprintf(stderr, "Experiment has %lld packets sent and %lld received\n",
+	    sendcounter,
+	    receivecounter);
+    now.tv_sec++;
+    oflops_schedule_timer_event(ctx,&now, PRINTCOUNT);
   }
   else if(!strcmp(str,BYESTR))
   {
@@ -207,12 +222,12 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
   //Check receive sequence
-  uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)]);
-  uint16_t et = ntohs(*((uint16_t *) &(pkt_in->data)[sizeof(struct ether_header)-2]));
-  if (et != EXPT_ET)
+  uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)+sizeof(struct iphdr)]);
+  uint8_t et = *((uint8_t *) &(pkt_in->data)[23]);
+  if (et != 1)
   {
     fprintf(stderr, "Ether type %u received != %u sent\n", 
-	    et, EXPT_ET);
+	    et, 1);
     return 0;
   }  
   if (receiveno > sendno)
@@ -244,7 +259,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
     fprintf(stderr, "Delay of > %u sec!\n", timediff.tv_sec);
     return 0;
     }*/
-  fprintf(delayfile, "%ld\n", timediff.tv_usec);
+  fprintf(delayfile, "%ld.%.6ld\n", timediff.tv_sec, timediff.tv_usec);
   totaldelay += ((double) timediff.tv_usec)+((double) timediff.tv_sec*10e6);
   delaycounter++;
 
@@ -269,7 +284,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
   if(ofc == OFLOPS_CONTROL)	// pcap dump the control channel
-    return snprintf(filter,buflen,"tcp dst port 6633");
+    return snprintf(filter,buflen,"tcp dst port 6634");
   else if(ofc == OFLOPS_DATA1)	// pcap dump data channel 1
     return snprintf(filter,buflen," ");
   else 
@@ -287,7 +302,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   if (ch == OFLOPS_DATA1)
   {
     //See packet sent
-    sendno = (uint32_t) atoi((char *)&(pe->data)[sizeof(struct ether_header)]);
+    sendno = (uint32_t) atoi((char *)&(pe->data)[sizeof(struct ether_header)+sizeof(struct iphdr)]);
     sendtime[((uint16_t) sendno)] = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got data packet of length %u (seq %u) at %ld.%.6ld\n",
@@ -299,11 +314,8 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
   {
     //See packet received
     receivetime = pe->pcaphdr.ts;
-    //FIXME: Value for NEC
-    //pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[86]);
-    //FIXME: Value for HP
-    pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[98]);
-    if (PACKET_IN_DEBUG)
+    pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[118]);
+    //if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
 	      pe->pcaphdr.len,
 	      receivetime.tv_sec, receivetime.tv_usec, 

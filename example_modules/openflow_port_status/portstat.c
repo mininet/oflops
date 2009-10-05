@@ -262,7 +262,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
 	assert(probe_index>=0);
 	assert(probe_index<MAX_OUTSTANDING);
 	p = &probes[probe_index];
-	assert(p->in_use);
+	fprintf(stderr, "Found unmarked probe.");
 	if (PACKET_IN_DEBUG)
 		fprintf(stderr, "Got OpenFlow packet of length %u type %u at %ld.%.6ld of probe_index %d\n", 
 				pe->pcaphdr.len, type,
