@@ -13,7 +13,17 @@ int default_module_init(struct oflops_context *ctx, char * init)
 int default_module_get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
 	if(ofc == OFLOPS_CONTROL)       // only pcap dump the control channel
-		return snprintf(filter,buflen,"tcp port %d", ctx->listen_port);
+
+		/*********************
+		 * Stolen from man pcap(3):
+		 *      To print all IPv4 HTTP packets to and from port
+		 *      80, i.e. print only packets that contain data,
+		 *      not,  for  example,  SYN  and  FIN packets and ACK-only packets.
+		 **/
+		return snprintf(filter,buflen,"tcp port %d"  		// port openflow
+				" and (((ip[2:2] - ((ip[0]&0xf)<<2)) - "// ip.tot_len - ip header len *4
+				" ((tcp[12]&0xf0)>>2)) != 0)", 		// - tcp header len *4
+				ctx->listen_port);
 	else
 		return 0;
 }

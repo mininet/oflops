@@ -29,23 +29,24 @@ typedef enum oflops_channel_name {
 
 typedef struct test_module
 {
-	// Return the name of the module
-	//
-	// DEFAULT: NONE! must be defined
-	//
-	// str returnned is static; don't free()
+	/** Return the name of the module
+	 *
+	 * DEFAULT: NONE! must be defined
+	 * @return str returned is static; don't free()
+	 */
 	const char * (*name)(void);
 
-	// Initialize module with the config string
-	//
-	// DEFAULT: NOOP
-	//
-	// return 0 if success, -1 if fatal error
+	/** \brief Initialize module with the config string
+	 * @param ctx opaque context
+	 * @param config_str string of parameters to pass to module
+	 * @return 0 if success, -1 if fatal error
+	 */
 	int (*init)(struct oflops_context *ctx, char * config_str);
 
-	// Ask module what pcap_filter it wants for this channel
-	//
-	// DEFAULT: return zero --> don't send pcap events on this channel
+	/** \brief Ask module what pcap_filter it wants for this channel
+	 * 
+	 * DEFAULT: return zero --> don't send pcap events on this channel
+	 */
 	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
 
 	// Tell the module it's time to start its test
@@ -80,6 +81,7 @@ typedef struct test_module
 	#else
 		#error "Unknown version of openflow"
 	#endif
+	// FIXME: KK says this should be vector of all openflow messages
 	int (*of_event_echo_request)(struct oflops_context *ctx, struct ofp_header * ofph);
 	int (*of_event_port_status)(struct oflops_context *ctx, struct ofp_port_status * ofph);
 	int (*of_event_other)(struct oflops_context *ctx, struct ofp_header * ofph);	
@@ -97,26 +99,66 @@ typedef struct test_module
 // List of interfaces exposed from oflops to test_modules
 
 
-/// Send an openflow message from the module to the switch along the control channel
-int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *);
-/// Send an raw message from the module to the switch along the data channel
+/** Send an openflow message from the module to the switch along the control channel
+ * @param ctx	opaque pointer
+ * @param hdr	pointer to an openflow header message (already in network byte order)
+ */
+int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header * hdr);
+
+
+/** Send an raw message to the switch out a specified channel
+ * @param ctx	opaque pointer
+ * @param ch  	Oflops channel to send the message out
+ * @param msg	pointer to mesg including link layer headers
+ * @param len	length of msg
+ * @return number of bytes written; -1 if error (same as write(2))
+ */
 int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len);
 
-/// Get the file descriptor of the channel 
+
+/** Get a file descriptor for the specified channel 
+ * returns an fd of a UDP socket bound to the device bound to the specified channel
+ * @param ctx	opaque pointer
+ * @param ch  	Oflops channel 
+ * @return	file descriptor
+ */
 int oflops_get_channel_fd(struct oflops_context *ctx, oflops_channel_name ch);
-/// Get the file descriptor of the channel 
+
+/** Get a file descriptor for the specified channel 
+ * returns an fd of a *raw* socket bound to the device bound to the specified channel
+ * @param ctx	opaque pointer
+ * @param ch  	Oflops channel 
+ * @return	file descriptor
+ */
 int oflops_get_channel_raw_fd(struct oflops_context *ctx, oflops_channel_name ch);
 
-/// Schedule a time event; arg is passed back to the test_module when the event occurs
-/// 	returns a unique ID for the event (if test wants to cancel it) or -1 on error
+/** Schedule a time event; arg is passed back to the test_module when the event occurs
+ * @param ctx	opaque pointer
+ * @param tv	a pointer to the absolute time the event should happen
+ * @param arg	a parameter to pass to the event
+ * @return a unique ID for the event (if test wants to cancel it) or -1 on error
+ */
 int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, void * arg);
+// FIXME: expose cancel timmer
 
-/// Lookup the timestamp for this chunk of data
-/// 	works for tcp hdrs and openflow messages
+/** Lookup the timestamp for this chunk of data 
+ * If the specified channel was setup to be tracked via ptrack (pcap_track.h), then
+ * it should be possible to map this blob of data to the libpcap timestamp when it came in
+ * ptrack_add_* can be used to track openflow messages, tcp messages, etc.
+ * @param ctx	opaque pointer
+ * @param data 	the data to lookup
+ * @param len	length of the data
+ * @param hdr	pointer to a pcap header; this will be filled in if the data is matched
+ * @return 	zero if not found (*hdr unchanged); >zero implies *hdr is valid and actual number indicates how far oflops had to search
+ */
 int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, struct pcap_pkthdr * hdr, oflops_channel_name ofc);
 
-/// Tell the harness this test is over
-int oflops_end_test(struct oflops_context *ctx);
+/** Tell the harness this test is over
+ * @param ctx	i		opaque pointer
+ * @param should_continue	flag for if this test had a fatal error and the oflops suite should stop processing other tests
+ * @return zero (always for now)
+ */
+int oflops_end_test(struct oflops_context *ctx, int should_continue);
 
 
 
