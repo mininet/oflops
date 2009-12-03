@@ -28,6 +28,7 @@ typedef struct oflops_context
 	int max_channels;
 	struct channel_info * channels;	// control, send, recv,etc.
 	int should_end;
+	int should_continue;
 	struct wc_queue * timers;
 } oflops_context;
 

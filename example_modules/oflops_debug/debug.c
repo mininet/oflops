@@ -81,7 +81,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 	fprintf(stderr, "At %ld.%.6ld (sched for %ld.%.6ld) : Got timer_event %s \n",now.tv_sec, now.tv_usec, te->sched_time.tv_sec, 
 			te->sched_time.tv_usec, str);
 	if(!strcmp(str,BYESTR))
-		oflops_end_test(ctx);
+		oflops_end_test(ctx,1);
 	return 0;
 }
 

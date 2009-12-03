@@ -24,9 +24,10 @@
  * hook for the test module to signal that the test is done
  **/
 
-int oflops_end_test(struct oflops_context *ctx)
+int oflops_end_test(struct oflops_context *ctx,int should_continue)
 {
 	ctx->should_end = 1;
+	ctx->should_continue = should_continue;
 	return 0;
 }
 

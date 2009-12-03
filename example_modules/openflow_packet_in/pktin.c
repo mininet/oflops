@@ -208,7 +208,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 	    (sendcounter-receivecounter),
 	    ((float) (totaldelay/((double) delaycounter))));
     fclose(delayfile);
-    oflops_end_test(ctx);
+    oflops_end_test(ctx,1);
   }
   else
     fprintf(stderr, "Unknown timer event: %s", str);

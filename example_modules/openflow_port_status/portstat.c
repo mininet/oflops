@@ -107,7 +107,7 @@ void new_rate(oflops_context * ctx)	// worst side effect evar
 		fprintf(stderr, " (i.e., loss = %lld) with average delay of %f us.\n", 
 				(sentcounter-receivecounter),
 				((float) ((double) totaldelay)/((double) receivecounter)));
-		oflops_end_test(ctx);
+		oflops_end_test(ctx,1);
 		return;
 	}
 	//Open delay file
