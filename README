@@ -4,9 +4,9 @@
 
 -------------------          SUMMARY               --------------------
 
-Oflops is a modular testing and benchmarking framework for openflow 
-switches.  It uses libpcap and raw packet writing to simutaneously 
-emulate an openflow controller and client traffic.  It ships with 
+Oflops is a modular testing and benchmarking framework for openflow
+switches.  It uses libpcap and raw packet writing to simutaneously
+emulate an openflow controller and client traffic.  It ships with
 an existing suite of tests and users are encouraged to develop their
 own tests.
 
@@ -21,11 +21,11 @@ make install
 -------------------  QUICK RUN : local software switch --------------------
 
 
-1) Setup your software openflow switch 
+1) Setup your software openflow switch
     a) Make sure that any program that broadcasts on all interfaces,
          is *off*, .e.g., IPv6 routing.  See OpenFlow README for more examples.
     b) Bring up some virtual interfaces:
-        
+       
         ip link add type veth           # add veth0,veth1
         ip link add type veth           # add veth2,veth3
         ip link add type veth           # add veth3,veth4
@@ -37,15 +37,15 @@ make install
         ofprotocol tcp:localhost:6633 unix:/var/run/dp0.sock
         [see openflow reference implementation INSTALL file for more detail]
 
-2) become root 
+2) become root
     oflops uses libpcap and raw sockets, so you need privs
 
-3) Run oflops with lo as the "control" interface and the other half of the 
+3) Run oflops with lo as the "control" interface and the other half of the
         vethXX links as two "data" interfaces
 
     oflops -c lo -d veth1 -d veth3 /path/to/test/module
 
-3a) Running oflops directly from the source directory is a PITA because of 
+3a) Running oflops directly from the source directory is a PITA because of
         libtool.  The following is a sample invocation for inside the src directory.
 
     ./oflops -c lo -d veth1 -d veth3 ./example_modules/openflow_packet_in/.libs/libof_packet_in.so
@@ -53,7 +53,7 @@ make install
 -------------------  QUICK RUN : hardware switch --------------------
 
 1) Setup your hardware switch
-    a) physically connect at least one ethernet cable from your switch to a dedicated 
+    a) physically connect at least one ethernet cable from your switch to a dedicated
         ethernet interface on the box where you will run oflops, e.g., eth1.  In
         this context, dedicated means that no other applications are using that interface.
         Also, some tests may require more than one data channel, so it is may be necesary
