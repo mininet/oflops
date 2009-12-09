@@ -14,6 +14,8 @@ EXTRA_DIST=./doc
 bin_PROGRAMS=oflops
 lib_LTLIBRARIES=liboflops_test.la
 
+liboflops_test_la_SOURCES= test_module.h  test_module.c
+
 oflops_SOURCES= \
 	channel_info.h channel_info.c \
 	context.h context.c \
@@ -27,9 +29,8 @@ oflops_SOURCES= \
 	usage.h usage.c \
 	utils.h utils.c \
 	wc_event.h wc_event.c 
-oflops_LDFLAGS=-static
+oflops_LDFLAGS=-static -Wl,-E
 
-liboflops_test_la_SOURCES= test_module.h  test_module.c
 
 SUBDIRS = example_modules
 
