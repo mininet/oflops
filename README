@@ -1,0 +1,87 @@
+            OFLOPS: OpenFLow Operations Per Second
+
+           A benchmarking suite for openflow switches.
+
+-------------------          SUMMARY               --------------------
+
+Oflops is a modular testing and benchmarking framework for openflow 
+switches.  It uses libpcap and raw packet writing to simutaneously 
+emulate an openflow controller and client traffic.  It ships with 
+an existing suite of tests and users are encouraged to develop their
+own tests.
+
+-------------------       QUICK INSTALL            --------------------
+
+sh boot.sh          #   if no ./configure file
+./configure
+make
+make docs           # build API documentation in ./doc
+make install
+
+-------------------  QUICK RUN : local software switch --------------------
+
+
+1) Setup your software openflow switch 
+    a) Make sure that any program that broadcasts on all interfaces,
+         is *off*, .e.g., IPv6 routing.  See OpenFlow README for more examples.
+    b) Bring up some virtual interfaces:
+        
+        ip link add type veth           # add veth0,veth1
+        ip link add type veth           # add veth2,veth3
+        ip link add type veth           # add veth3,veth4
+        for p in 0 1 2 3 4 5 ; do
+                ifconfig veth$p up
+                done
+    c) Start the software switch:
+        ofdatapath punix:/var/run/dp0.sock -i veth0,eth2 &
+        ofprotocol tcp:localhost:6633 unix:/var/run/dp0.sock
+        [see openflow reference implementation INSTALL file for more detail]
+
+2) become root 
+    oflops uses libpcap and raw sockets, so you need privs
+
+3) Run oflops with lo as the "control" interface and the other half of the 
+        vethXX links as two "data" interfaces
+
+    oflops -c lo -d veth1 -d veth3 /path/to/test/module
+
+3a) Running oflops directly from the source directory is a PITA because of 
+        libtool.  The following is a sample invocation for inside the src directory.
+
+    ./oflops -c lo -d veth1 -d veth3 ./example_modules/openflow_packet_in/.libs/libof_packet_in.so
+
+-------------------  QUICK RUN : hardware switch --------------------
+
+1) Setup your hardware switch
+    a) physically connect at least one ethernet cable from your switch to a dedicated 
+        ethernet interface on the box where you will run oflops, e.g., eth1.  In
+        this context, dedicated means that no other applications are using that interface.
+        Also, some tests may require more than one data channel, so it is may be necesary
+        to connect more cables to more interfaces, e.g., eth2.
+    b) point your switch's controller connection to the IP oflops machine on a free port,
+            e.g., 6633.   Note the interface matching the IP address, e.g., eth0.
+            Note that this cannot be the same interface as in (1a) unless you're doing
+            in-band control
+
+2) become root
+
+3) Run oflops with eth0 as the "control" interface and eth1 and eth2 as "data" interfaces
+
+    oflops -c eth0 -d eth1 -d eth2 /path/to/test/module
+
+-------------------- Existing Modules -----------------------------
+
+1) packet_in timing: calculate the time between when data packet arrives
+    and corresponding packet_in is received
+2) port stats rtt: calculate time between port stats request and response.
+
+-------------------- Writing New Modules -----------------------------
+
+1) Start by reading code in example_modules/*
+2) Use ./doc/* for reference (did you `make docs`?)
+3) Contribute them back to oflops :-)
+
+--------------------   Contact            -----------------------------
+
+Currently oflops does not have its own mailing list.  Please send
+questions or comments to the authors directly or openflow-discuss@openflowswitch.org
