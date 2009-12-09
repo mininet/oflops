@@ -73,18 +73,18 @@ typedef struct test_module
 	// DEFAULT: ignore this type of openflow message
 	//
 	// return 0 if success or -1 on error
-	int (*of_event_packet_in)(struct oflops_context *ctx, struct ofp_packet_in * ofph);
+	int (*of_event_packet_in)(struct oflops_context *ctx, const struct ofp_packet_in * ofph);
 	#if OFP_VERSION == 0x97
-		int (*of_event_flow_removed)(struct oflops_context *ctx, struct ofp_flow_expired * ofph);
+		int (*of_event_flow_removed)(struct oflops_context *ctx, const struct ofp_flow_expired * ofph);
 	#elif OFP_VERSION == 0x98
-		int (*of_event_flow_removed)(struct oflops_context *ctx, struct ofp_flow_removed * ofph);
+		int (*of_event_flow_removed)(struct oflops_context *ctx, const struct ofp_flow_removed * ofph);
 	#else
 		#error "Unknown version of openflow"
 	#endif
 	// FIXME: KK says this should be vector of all openflow messages
-	int (*of_event_echo_request)(struct oflops_context *ctx, struct ofp_header * ofph);
-	int (*of_event_port_status)(struct oflops_context *ctx, struct ofp_port_status * ofph);
-	int (*of_event_other)(struct oflops_context *ctx, struct ofp_header * ofph);	
+	int (*of_event_echo_request)(struct oflops_context *ctx, const struct ofp_header * ofph);
+	int (*of_event_port_status)(struct oflops_context *ctx, const struct ofp_port_status * ofph);
+	int (*of_event_other)(struct oflops_context *ctx, const struct ofp_header * ofph);	
 
 	// Tell the test module that a timer went off
 	//

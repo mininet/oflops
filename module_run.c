@@ -135,70 +135,92 @@ static void process_event(oflops_context *ctx, test_module * mod, struct pollfd 
  */
 static void process_control_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd)
 {
-	// FIXME: this code assumes that the entire message is in the buffer and thus we don't have to buffer
-	// partial messages	; buffering is a PITA and I'm just asserting around it here
-	char * buf;
+    char * neobuf;
+	static char * buf; 
+    static int buflen   = -1;
+    static int bufstart =  0;       // begin of unprocessed data
+    static int bufend   =  0;       // end of unprocessed data
 	unsigned int msglen;
-	struct ofp_header ofph;
-	int err;
+	struct ofp_header * ofph;
+	int count;
+
+    if ( buflen == - 1 )
+    {
+        buflen = BUFLEN;
+        buf = malloc_and_check(BUFLEN);
+    }
+    if(bufend >= buflen )   // if we've filled up our buffer, resize it
+    {
+        buflen *=2 ;
+        buf = realloc_and_check(buf, buflen);
+    }
 
 	assert(pfd->revents & POLLIN);		// FIXME: only know how to handle POLLIN events for now
-	// read just the header from the socket
-	err = read(pfd->fd,&ofph, sizeof(ofph));
-	if(err < 0)
+	count = read(pfd->fd,&buf[bufend], buflen - bufend);
+	if(count < 0)
 	{
 		perror("process_control_event:read() ::");
 		return ;
 	}
-	if(err == 0)
+	if(count == 0)
 	{
 		fprintf(stderr, "Switch Control Connection reset! wtf!?!...exiting\n");
 		exit(0);
 	}
-	if(err <  sizeof(ofph))		// FIXME!
-	{
-		fprintf(stderr, "process_control_event:read(): short read (%d < %u)\n",
-				err, sizeof(ofph));
-		abort();
-		return;
+    bufend += count;            // extend buf by amount read
+    count = bufend - bufstart;  // re-purpose count
 
-	}
-	msglen = ntohs(ofph.length);
+    while(count > 0 )
+    {
+        if(count <  sizeof(ofph))   // if we didn't get full openflow header
+            return;                 // come back later
 
-	buf = malloc_and_check(msglen);
-	// copy header into place
-	memcpy(buf,&ofph,sizeof(ofph));
-	// read the rest of the msg if any
-	if( msglen > sizeof(ofph))
-	{
-		err = read(pfd->fd, &buf[sizeof(ofph)], msglen - sizeof(ofph));
-		assert(err == (msglen - sizeof(ofph)));	// make sure we got everything
-	}
+        ofph = (struct ofp_header * ) &buf[bufstart];
+        msglen = ntohs(ofph->length);
+        if( ( msglen > count) ||    // if we don't yet have the whole msg
+                    (buflen < (msglen + bufstart)))  // or our buffer is full
+                return;     // get the rest on the next pass
 
-	switch(ofph.type)
-	{
-		case OFPT_PACKET_IN:
-			mod->of_event_packet_in(ctx, (struct ofp_packet_in *)buf);
-			break;
-		case OFPT_FLOW_EXPIRED:
-			#if OFP_VERSION == 0x97
-				mod->of_event_flow_removed(ctx, (struct ofp_flow_expired *)buf);
-			#elif OFP_VERSION == 0x98
-				mod->of_event_flow_removed(ctx, (struct ofp_flow_removed *)buf);
-			#else
-			#error "Unknown version of openflow"
-			#endif
-			break;
-		case OFPT_PORT_STATUS:
-			mod->of_event_port_status(ctx, (struct ofp_port_status *)buf);
-			break;
-		case OFPT_ECHO_REQUEST:
-			mod->of_event_echo_request(ctx, (struct ofp_header *)buf);
-			break;
-		default:
-			mod->of_event_other(ctx, (struct ofp_header * ) buf);
-			break;
-	};
+        neobuf = malloc_and_check(msglen);
+        memcpy(neobuf, &ofph, msglen);
+
+        switch(ofph->type)
+        {
+            case OFPT_PACKET_IN:
+                mod->of_event_packet_in(ctx, (struct ofp_packet_in *)neobuf);
+                break;
+            case OFPT_FLOW_EXPIRED:
+                #if OFP_VERSION == 0x97
+                    mod->of_event_flow_removed(ctx, (struct ofp_flow_expired *)neobuf);
+                #elif OFP_VERSION == 0x98
+                    mod->of_event_flow_removed(ctx, (struct ofp_flow_removed *)neobuf);
+                #else
+                    #error "Unknown version of openflow"
+                #endif
+                break;
+            case OFPT_PORT_STATUS:
+                mod->of_event_port_status(ctx, (struct ofp_port_status *)neobuf);
+                break;
+            case OFPT_ECHO_REQUEST:
+                mod->of_event_echo_request(ctx, (struct ofp_header *)neobuf);
+                break;
+            default:
+                if(ofph->type > OFPT_STATS_REPLY)   // FIXME: update for new openflow versions
+                {
+                    fprintf(stderr, "%s:%zd :: Data buffer probably trashed : unknown openflow type %d\n",
+                            __FILE__,__LINE__, ofph->type);
+                    abort();
+                }
+                mod->of_event_other(ctx, (struct ofp_header * ) neobuf);
+                break;
+        };
+        free(neobuf);               
+        bufstart += msglen;
+        count = bufend - bufstart;  // repurpose count
+    }       // end while()
+
+    if ( bufstart >= bufend)        // if no outstanding bytes
+        bufstart = bufend = 0;      // reset our buffer
 }
 
 

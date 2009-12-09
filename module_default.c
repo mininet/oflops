@@ -42,12 +42,12 @@ int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_eve
 	if(!ctx->channels[OFLOPS_CONTROL].timestamps)
 		ctx->channels[OFLOPS_CONTROL].timestamps = ptrack_new();
 	// add this packet to the list of timestamps
-	ptrack_add_of_entry(ctx->channels[OFLOPS_CONTROL].timestamps, pe->data, pe->pcaphdr.caplen, pe->pcaphdr);
+	return ptrack_add_of_entry(ctx->channels[OFLOPS_CONTROL].timestamps, pe->data, pe->pcaphdr.caplen, pe->pcaphdr);
 }
 
 
 
-int default_module_of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pktin)
+int default_module_of_event_packet_in(struct oflops_context *ctx, const struct ofp_packet_in * pktin)
 {
 	return 0;
 }
@@ -55,9 +55,9 @@ int default_module_of_event_packet_in(struct oflops_context *ctx, struct ofp_pac
 
 
 #if OFP_VERSION == 0x97
-	int default_module_of_event_flow_removed(struct oflops_context *ctx, struct ofp_flow_expired * ofph)
+	int default_module_of_event_flow_removed(struct oflops_context *ctx, const struct ofp_flow_expired * ofph)
 #elif OFP_VERSION == 0x98
-	int default_module_of_event_flow_removed(struct oflops_context *ctx, struct ofp_flow_removed * ofph)
+	int default_module_of_event_flow_removed(struct oflops_context *ctx, const struct ofp_flow_removed * ofph)
 #else
 #error "Unknown version of openflow"
 #endif
@@ -65,7 +65,7 @@ int default_module_of_event_packet_in(struct oflops_context *ctx, struct ofp_pac
 	return 0;
 }
 
-int default_module_of_event_echo_request(struct oflops_context *ctx, struct ofp_header * ofph)
+int default_module_of_event_echo_request(struct oflops_context *ctx, const struct ofp_header * ofph)
 {
 	struct ofp_header resp;
 	memcpy(&resp,ofph,sizeof(resp));
@@ -75,11 +75,11 @@ int default_module_of_event_echo_request(struct oflops_context *ctx, struct ofp_
 }
 
 
-int default_module_of_event_port_status(struct oflops_context * ctx, struct ofp_port_status * ofph)
+int default_module_of_event_port_status(struct oflops_context * ctx, const struct ofp_port_status * ofph)
 {
 	return 0;
 }
-int default_module_of_event_other(struct oflops_context * ctx, struct ofp_header * ofph)
+int default_module_of_event_other(struct oflops_context * ctx, const struct ofp_header * ofph)
 {
 	return 0;
 }
