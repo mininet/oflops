@@ -24,19 +24,24 @@ typedef enum oflops_channel_name {
 
 
 
-// Any test_module can implement any of the following 
-// 	functions to override the default behavior
+/**  New test_module should implement these call backs.
+ * Unimplemeted callbacks fall back to a default behavior.
+ */
 
 typedef struct test_module
 {
 	/** Return the name of the module
 	 *
 	 * DEFAULT: NONE! must be defined
+     *
 	 * @return str returned is static; don't free()
 	 */
 	const char * (*name)(void);
 
 	/** \brief Initialize module with the config string
+     *
+	 * DEFAULT: NONE! must be defined
+     *
 	 * @param ctx opaque context
 	 * @param config_str string of parameters to pass to module
 	 * @return 0 if success, -1 if fatal error
@@ -44,35 +49,53 @@ typedef struct test_module
 	int (*init)(struct oflops_context *ctx, char * config_str);
 
 	/** \brief Ask module what pcap_filter it wants for this channel
-	 * 
+     *
 	 * DEFAULT: return zero --> don't send pcap events on this channel
+     *
+     * @param ofc      The oflops channel (data or control) to filter on filter
+	 * @param filter   A tcpdump-style pcap filter string, suitable for pcap_set_filter()
+     *          This string is already allocated.
+     * @param buflen   The max length of the filter string
+     * @return The length of the filter string: zero implies "do not listen on this channel"
 	 */
 	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
 
-	// Tell the module it's time to start its test
-	// 	pass raw sockets for send and recv channels
-	// 	if the module wants direct access to them
-	//
-	// DEFAULT: NOOP
-	//
-	// return 0 if success or -1 on error
+	/** \brief Tell the module it's time to start its test
+	 * 	pass raw sockets for send and recv channels
+	 * 	if the module wants direct access to them
+	 *
+	 * DEFAULT: NOOP
+     *
+	 * @param ctx opaque context
+	 *
+	 * @return 0 if success or -1 on error
+     */
 	int (*start)(struct oflops_context * ctx);
 
-	// Tell the test module that pcap found a packet on 
-	// 	a certain channel
-	// DEFAULT: ignore pcap events
-	// 	if this module does not want pcap events, return NULL
-	// 	for get_pcap_filter()
-	//
-	// return 0 if success or -1 on error
+	/** \brief Tell the test module that pcap found a packet on 
+	 * 	a certain channel
+     *
+	 * DEFAULT: ignore pcap events on this channel
+     *
+	 * 	if this module does not want pcap events, return NULL
+	 * 	for get_pcap_filter()
+	 *
+	 * @param ctx   opaque context
+     * @param pe    structure holding packet and pcap timestamp
+     * @param ch    which channel this packet arrived on
+	 * @return 0    if success or -1 on error
+     */
 	int (*handle_pcap_event)(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch);
 
-	// Tell the test module that an openflow mesg came
-	// 	over the control channel
-	//
-	// DEFAULT: ignore this type of openflow message
-	//
-	// return 0 if success or -1 on error
+	/** \brief Tell the test module that an openflow mesg came
+	 * 	over the control channel
+	 *
+	 * DEFAULT: ignore this type of openflow message
+	 * 
+	 * @param ctx   opaque context
+     * @param ofph  a pointer to an openflow message; do not free()
+	 * @return 0 if success or -1 on error
+     */
 	int (*of_event_packet_in)(struct oflops_context *ctx, const struct ofp_packet_in * ofph);
 	#if OFP_VERSION == 0x97
 		int (*of_event_flow_removed)(struct oflops_context *ctx, const struct ofp_flow_expired * ofph);
@@ -86,11 +109,14 @@ typedef struct test_module
 	int (*of_event_port_status)(struct oflops_context *ctx, const struct ofp_port_status * ofph);
 	int (*of_event_other)(struct oflops_context *ctx, const struct ofp_header * ofph);	
 
-	// Tell the test module that a timer went off
-	//
-	// DEFAULT: ignore timer events
-	//
-	// return 0 if success or -1 on error
+	/** \brief Tell the test module that a timer went off
+	 *
+	 * DEFAULT: ignore timer events
+	 *
+	 * @param ctx   opaque context
+     * @param te    a structure holding relevant timer info
+	 * @return      0 if success or -1 on error
+     */
 	int (*handle_timer_event)(struct oflops_context * ctx, struct timer_event * te);
 	void * symbol_handle;
 	
