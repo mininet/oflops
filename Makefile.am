@@ -27,6 +27,7 @@ oflops_SOURCES= \
 	usage.h usage.c \
 	utils.h utils.c \
 	wc_event.h wc_event.c 
+oflops_LDFLAGS=-static
 
 liboflops_test_la_SOURCES= test_module.h  test_module.c
 
