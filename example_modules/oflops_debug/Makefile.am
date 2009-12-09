@@ -4,7 +4,7 @@ OFSRC=@openflowsrc@
 CFLAGS+=-Wall -I$(OFSRC)/include -I$(TOP) -Wshadow 
 LDFLAGS+=-L$(TOP)
 
-LDADD=-ldl -lpcap -ltest_module
+LDADD=-ldl -lpcap -loflops_test
 
 
 lib_LTLIBRARIES=liboflops_debug.la
