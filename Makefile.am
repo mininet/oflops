@@ -32,7 +32,8 @@ oflops_SOURCES= \
 oflops_LDFLAGS=-static -Wl,-E
 
 
-SUBDIRS = example_modules
+
+SUBDIRS = example_modules cbench
 
 docs: 
 	cd doc  && doxygen doc.cfg

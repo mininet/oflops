@@ -1,0 +1,50 @@
+cbench is a benchmarking tool for controllers
+
+Simple Algorithm (verging on naive):
+    pretend to be n=1,2,4,8,16 switches
+    create n openflow sessions to the controller
+    for each session
+        1) send up a packet in
+        2) wait for a matching flow mod to come back
+        3) repeat
+        4) count how many times #1-3 happen per sec
+
+
+NOTE: packet_in messages are the only (?) switch-solicited openflow
+packet that should get a response from a controller.  Would be
+nice to evaluate more, but this is at least something.
+
+
+To run, run a controller on the local machine on port 6633, and 
+launch cbench without arguments.
+
+TODO: need to add cmdline parsing to change default params
+---------------------------------------------------------------------
+Sample output from simple controller in OpenFlow reference suite
+
+[capveg@grr cbench]$ ./cbench
+1   switches: fmods/sec:  23498   total = 23.498000 per ms
+1   switches: fmods/sec:  24024   total = 24.047498 per ms
+1   switches: fmods/sec:  23869   total = 23.893047 per ms
+1   switches: fmods/sec:  24665   total = 24.688893 per ms
+1   switches: fmods/sec:  24382   total = 24.406689 per ms
+2   switches: fmods/sec:  34682  33844   total = 68.526000 per ms
+2   switches: fmods/sec:  33661  33656   total = 67.385526 per ms
+2   switches: fmods/sec:  34976  34970   total = 70.013386 per ms
+2   switches: fmods/sec:  34625  34617   total = 69.312013 per ms
+2   switches: fmods/sec:  24893  30018   total = 54.980312 per ms
+4   switches: fmods/sec:  19794  19793  18663  18657   total = 76.907000 per ms
+4   switches: fmods/sec:  18934  18932  18932  18931   total = 75.805907 per ms
+4   switches: fmods/sec:  19092  19091  19090  19090   total = 76.438806 per ms
+4   switches: fmods/sec:  18982  18981  18981  18981   total = 76.001439 per ms
+4   switches: fmods/sec:  19096  19095  19094  19093   total = 76.454001 per ms
+8   switches: fmods/sec:  9895  9895  9894  9894  9410  9396  9396  9388   total = 77.168000 per ms
+8   switches: fmods/sec:  9687  9687  9686  9686  9686  9686  9686  9686   total = 77.567168 per ms
+8   switches: fmods/sec:  9616  9615  9614  9614  9614  9614  9614  9613   total = 76.991567 per ms
+8   switches: fmods/sec:  9617  9617  9617  9617  9616  9616  9615  9615   total = 77.006992 per ms
+8   switches: fmods/sec:  9668  9668  9667  9667  9667  9666  9665  9665   total = 77.410007 per ms
+16  switches: fmods/sec:  5028  5028  5028  5028  5028  5027  5027  5027  4740  4740  4733  4733  4727  4723  4722  4722   total = 78.061000 per ms
+16  switches: fmods/sec:  4809  4809  4809  4809  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808   total = 77.010061 per ms
+16  switches: fmods/sec:  4841  4841  4841  4841  4841  4841  4841  4841  4841  4841  4840  4840  4840  4840  4840  4840   total = 77.527010 per ms
+16  switches: fmods/sec:  4819  4818  4818  4818  4818  4818  4818  4818  4818  4817  4817  4817  4816  4815  4815  4815   total = 77.152527 per ms
+16  switches: fmods/sec:  4809  4808  4808  4808  4808  4808  4807  4807  4807  4806  4805  4805  4805  4804  4804  4803   total = 76.979153 per ms
