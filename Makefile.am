@@ -40,4 +40,4 @@ docs:
 	@echo Generated HTML and Latex docs under ./doc
 
 count: 
-	@wc -l $(oflops_SOURCES) | sort -n
+	@wc -l `find . -name \*.c -o -name \*.h -o -name Makefile.am` | sort -n
