@@ -3,6 +3,11 @@
 
 #include "context.h"
 
+/** @defgroup modules
+ *
+ * Modules for different oflops runs.
+ */
+
 // Set of default operations for modules
 
 int default_module_init(struct oflops_context *ctx, char *);

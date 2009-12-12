@@ -78,7 +78,8 @@ uint64_t delaycounter = 0;
  */
 FILE* delayfile;
 
-/** Packet in module.
+/** @ingroup modules
+ * Packet in module.
  * The module sends packet into a port to generate packet-in events.
  * The rate, count and delay then determined.
  *
