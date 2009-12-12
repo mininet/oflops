@@ -45,7 +45,7 @@ AC_PROG_INSTALL
 AC_PROG_AWK
 AC_PROG_CPP
 AC_PROG_LIBTOOL
-
+AC_PROG_DOXYGEN
 
 # Checks for header files.
 AC_CHECK_HEADERS([config.h net/bpf.h])
@@ -58,11 +58,13 @@ AC_CHECK_FUNCS([strerror])
 
 
 AC_CONFIG_FILES([Makefile \
+		doc/Makefile
+		doc/doxygen.conf\
 		cbench/Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
 		example_modules/openflow_packet_in/Makefile \
-		example_modules/openflow_port_status/Makefile \
+		example_modules/openflow_port_status/Makefile
 		])
 
 AC_OUTPUT
