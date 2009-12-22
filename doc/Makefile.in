@@ -21,7 +21,9 @@ help:
 	@echo "  EXTRACT_STATIC=YES/NO to extract static functions"
 	@echo "  HAVE_DOT=YES/NO to draw graphical graphs"
 
-all: docs
+# nothing to do on all
+all: 
+
 docs: html latex
 
 
