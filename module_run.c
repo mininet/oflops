@@ -182,7 +182,7 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
                 return;     // get the rest on the next pass
 
         neobuf = malloc_and_check(msglen);
-        memcpy(neobuf, &ofph, msglen);
+        memcpy(neobuf, ofph, msglen);
 
         switch(ofph->type)
         {
