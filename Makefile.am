@@ -33,11 +33,10 @@ oflops_LDFLAGS=-static -Wl,-E
 
 
 
-SUBDIRS = example_modules cbench
+SUBDIRS = example_modules cbench doc
 
 docs: 
-	cd doc  && doxygen doc.cfg
-	@echo Generated HTML and Latex docs under ./doc
+	$(MAKE) -c doc docs
 
 count: 
 	@wc -l `find . -name \*.c -o -name \*.h -o -name Makefile.am` | sort -n
