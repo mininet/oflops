@@ -13,7 +13,11 @@ EXTRA_DIST=./doc
 bin_PROGRAMS=oflops
 lib_LTLIBRARIES=liboflops_test.la
 
-liboflops_test_la_SOURCES= test_module.h  test_module.c
+liboflops_test_la_SOURCES= test_module.h  test_module.c \
+	msgbuf.c msgbuf.h \
+	pcap_track.c  pcap_track.h \
+	utils.h utils.c \
+	wc_event.h wc_event.c 
 
 oflops_SOURCES= \
 	channel_info.h channel_info.c \
@@ -23,17 +27,15 @@ oflops_SOURCES= \
 	module_default.h  module_default.c \
 	oflops.c oflops.h \
 	oflops_pcap.h oflops_pcap.c \
-	pcap_track.c  pcap_track.h \
 	oflops_snmp.c oflops_snmp.h \
 	timer_event.h timer_event.c \
-	usage.h usage.c \
-	utils.h utils.c \
-	wc_event.h wc_event.c 
+	usage.h usage.c 
 oflops_LDFLAGS=-static -Wl,-E
 
 
-
-SUBDIRS = example_modules cbench doc
+# lame; add "." before anything else to force dependencies
+#	to be built right
+SUBDIRS = . example_modules cbench doc
 
 docs: 
 	$(MAKE) -c doc docs
