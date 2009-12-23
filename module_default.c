@@ -87,3 +87,7 @@ int default_module_handle_timer_event(struct oflops_context * ctx, struct timer_
 {
 	return 0;
 }
+int default_module_handle_snmp_event(struct oflops_context * ctx, struct snmp_event * se)
+{
+	return 0;
+}

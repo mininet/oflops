@@ -155,3 +155,26 @@ int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, stru
 	return ptrack_lookup(ch->timestamps,data,len,hdr);
 }
 
+int oflops_snmp_get(struct oflops_context * ctx, oid query[], size_t len)
+{
+	struct snmp_channel* ch = ctx->snmp_channel_info;
+	struct snmp_session* sess;
+
+	//Open session for async request
+	if(!(sess = snmp_open(&(ch->session))))
+	{
+		snmp_perror("snmp_open");
+		return 1;
+	}
+
+	//Build and send packet
+	if (ch->req != NULL)
+		snmp_free_pdu(ch->req);
+	ch->req = snmp_pdu_create(SNMP_MSG_GET);
+	snmp_add_null_var(ch->req, query, len);
+	if (!snmp_send(sess, ch->req))
+		snmp_perror("snmp_send");
+
+	return 0;
+}
+

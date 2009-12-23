@@ -5,11 +5,10 @@ OFSRC=@openflowsrc@
 CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow 
 LDFLAGS+=-L$(OFSRC)/lib 
 
-LDADD=-ldl -lpcap -loflops_test 
+LDADD=-ldl -lpcap -lnetsnmp -loflops_test 
 #LDADD+=-lefence
 
 EXTRA_DIST=./doc
-
 
 bin_PROGRAMS=oflops
 lib_LTLIBRARIES=liboflops_test.la
@@ -25,6 +24,7 @@ oflops_SOURCES= \
 	oflops.c oflops.h \
 	oflops_pcap.h oflops_pcap.c \
 	pcap_track.c  pcap_track.h \
+	oflops_snmp.c oflops_snmp.h \
 	timer_event.h timer_event.c \
 	usage.h usage.c \
 	utils.h utils.c \

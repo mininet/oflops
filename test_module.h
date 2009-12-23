@@ -3,9 +3,11 @@
 
 #include <openflow/openflow.h>
 #include <pcap.h>
+#include <net-snmp/net-snmp-config.h>
+#include <net-snmp/net-snmp-includes.h>
 
 struct test_module;
-
+	
 typedef enum oflops_channel_name {
 	OFLOPS_CONTROL,		// openflow control channel, e.g., eth0
 	OFLOPS_DATA1,		// sending channel, e.g., eth1
@@ -21,8 +23,7 @@ typedef enum oflops_channel_name {
 #include "oflops.h"
 #include "oflops_pcap.h"
 #include "timer_event.h"
-
-
+#include "oflops_snmp.h"
 
 /**  New test_module should implement these call backs.
  * Unimplemeted callbacks fall back to a default behavior.
@@ -119,18 +120,26 @@ typedef struct test_module
      */
 	int (*handle_timer_event)(struct oflops_context * ctx, struct timer_event * te);
 	void * symbol_handle;
+
+	/** \brief Tell the test module that a SNMP reply is received.
+	 * 
+	 * DEFAULT: Ignore SNMP replies
+	 *
+	 * @param ctx opqaue context
+	 * @param se struct to handle SNMP reply
+	 * @return 0 if success and -1 if error
+	 */
+	int (*handle_snmp_event)(struct oflops_context * ctx, struct snmp_event * se);
 	
 } test_module;
 
 // List of interfaces exposed from oflops to test_modules
-
 
 /** Send an openflow message from the module to the switch along the control channel
  * @param ctx	opaque pointer
  * @param hdr	pointer to an openflow header message (already in network byte order)
  */
 int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header * hdr);
-
 
 /** Send an raw message to the switch out a specified channel
  * @param ctx	opaque pointer
@@ -140,7 +149,6 @@ int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header * hdr);
  * @return number of bytes written; -1 if error (same as write(2))
  */
 int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len);
-
 
 /** Get a file descriptor for the specified channel 
  * returns an fd of a UDP socket bound to the device bound to the specified channel
@@ -179,13 +187,19 @@ int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, 
  */
 int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, struct pcap_pkthdr * hdr, oflops_channel_name ofc);
 
+/** Send SNMP get with oid
+ * @param ctx opaque pointer
+ * @param query oid to request
+ * @param len length of oid
+ * @return 0 if success and 1 if session fails
+ */
+int oflops_snmp_get(struct oflops_context * ctx, oid query[], size_t len);
+
 /** Tell the harness this test is over
  * @param ctx	i		opaque pointer
  * @param should_continue	flag for if this test had a fatal error and the oflops suite should stop processing other tests
  * @return zero (always for now)
  */
 int oflops_end_test(struct oflops_context *ctx, int should_continue);
-
-
 
 #endif

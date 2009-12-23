@@ -7,10 +7,8 @@ struct oflops_context;
 #include "test_module.h"
 #include "wc_event.h"
 #include "channel_info.h"
-
+#include "oflops_snmp.h"
 #include <pcap.h>
-
-
 
 typedef struct oflops_context
 {
@@ -27,6 +25,9 @@ typedef struct oflops_context
 	int n_channels;
 	int max_channels;
 	struct channel_info * channels;	// control, send, recv,etc.
+        /** Pointers to SNMP channel
+	 */
+	struct snmp_channel* snmp_channel_info;
 	int should_end;
 	int should_continue;
 	struct wc_queue * timers;

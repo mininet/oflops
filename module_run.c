@@ -34,12 +34,18 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
 int run_test_module(oflops_context *ctx, test_module * mod)
 {
 	int i;
+	//Setup
+	setup_snmp_channel(ctx);
 	for(i=0;i<ctx->n_channels;i++)
 		setup_channel( ctx, mod, i);
 
+	//Run
 	mod->start(ctx);
-
 	test_module_loop(ctx,mod);
+
+	//Teardown
+	teardown_snmp_channel(ctx);
+	
 	return 0;
 }
 
@@ -55,11 +61,15 @@ int run_test_module(oflops_context *ctx, test_module * mod)
 static void test_module_loop(oflops_context *ctx, test_module *mod)
 {
 	struct pollfd * poll_set;
+	int fds = 0;
+	int snmpblock = 0;
+	fd_set fdset;
+	struct timeval timeout;
 	int ret;
 	int len; 
 	int ch;
 	int n_fds=0;
-
+	
 	len = sizeof(struct pollfd) * (ctx->n_channels + 1);
 	poll_set = malloc_and_check(len);
 
@@ -69,6 +79,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		n_fds=0;
 		bzero(poll_set,len);
 
+		//Channels poll
 		for(ch=0; ch< ctx->n_channels; ch++)
 		{
 			if( ctx->channels[ch].pcap_handle)
@@ -81,7 +92,18 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		poll_set[n_fds].fd = ctx->control_fd;	// add the control channel at the end
 		poll_set[n_fds].events = POLLIN;
 		n_fds++;
-		
+
+		//SNMP poll
+		FD_ZERO(&fdset);
+		snmp_select_info(&fds, &fdset, &timeout, &snmpblock);
+		snmpblock = 0;
+		fds = select(fds, &fdset, NULL,NULL, snmpblock? NULL:&timeout);
+		if (fds)
+			snmp_read(&fdset);
+		else
+			snmp_timeout();
+
+		//Timer poll
 		next_event = timer_get_next_event(ctx);
 		while(next_event <= 0 )
 		{
@@ -299,6 +321,7 @@ int load_test_module(oflops_context *ctx, char * mod_filename, char * initstr)
 	symbol_fetch(of_event_port_status);
 	symbol_fetch(of_event_other);
 	symbol_fetch(handle_timer_event);
+	symbol_fetch(handle_snmp_event);
 #undef symbol_fetch
 	if(ctx->n_tests >= ctx->max_tests)
 	{

@@ -29,5 +29,6 @@ int default_module_of_event_echo_request(struct oflops_context *ctx, const struc
 int default_module_of_event_port_status(struct oflops_context *ctx, const struct ofp_port_status * ofph);
 int default_module_of_event_other(struct oflops_context *ctx, const struct ofp_header * ofph);
 int default_module_handle_timer_event(struct oflops_context * ctx, struct timer_event * te);
+int default_module_handle_snmp_event(struct oflops_context * ctx, struct snmp_event * se);
 
 #endif

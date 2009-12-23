@@ -17,6 +17,7 @@
 struct option oflops_options[] = {
 // 	name	, has_arg,  *var, val
 	{"control-dev", required_argument, NULL, 'c'}, 		// --control-dev eth0
+	{"snmp-dev", optional_argument, NULL, 's'}, 		// --snmp-dev necsw.openflow.org
 	{"data-dev", required_argument, NULL, 'd'}, 		// --data-dev eth1
 	{"port", required_argument, NULL, 'p'}, 		// --port 6633
 	{ 0 , 0 , 0, 0}
@@ -25,7 +26,7 @@ struct option oflops_options[] = {
 char * option_args[] =  {
 	"",			// no argument
 	"<required_arg>",	//required arg
-	"[arg]",		// optional arg
+	"[optional arg]",	// optional arg
 };
 
 static char * make_short_from_long(struct option long_options[]);
@@ -39,7 +40,10 @@ static void parse_test_module(oflops_context * ctx, int argc, char * argv[]);
 int parse_args(oflops_context * ctx, int argc, char * argv[])
 {
 	int c;
+	int snmp_arg = 0;
 	int options_index;
+	char* snmp_client;
+	char* snmp_community;
 	char * short_options = make_short_from_long(oflops_options);
 
 	while(1)
@@ -56,6 +60,17 @@ int parse_args(oflops_context * ctx, int argc, char * argv[])
 					usage(argv[optind], "requires argument");
 				channel_info_init(&ctx->channels[OFLOPS_CONTROL],optarg);
 				fprintf(stderr,"Setting control channel to %s\n", optarg);
+				break;
+			case 's':
+				snmp_arg++;
+				assert(snmp_arg < 2);
+				if(!optarg)
+					usage(argv[optind], "requires argument");
+				snmp_client = strtok(optarg, SNMP_DELIMITER);
+				snmp_community = strtok(NULL, SNMP_DELIMITER);
+				snmp_channel_init(ctx->snmp_channel_info, snmp_client, snmp_community);
+				fprintf(stderr,"Adding SNMP channel on %s with community string %s.\n", 
+					snmp_client, snmp_community);
 				break;
 			case 'd':
 				if(ctx->n_channels >= ctx->max_channels)	// resize array if needed
@@ -132,7 +147,7 @@ void usage(char * s1, char *s2)
 	} while(o->name);
 
 	fprintf(stderr, "\n\nExample invocation:\n"
-			"oflops -c eth0 -d eth1 -d eth2 -p 6633 liboflops_debug.so test_args\n");
+			"oflops -c eth0 -s 10.2.3.4:public -d eth1 -d eth2 -p 6633 liboflops_debug.so test_args\n");
 
 	exit(1);
 }
