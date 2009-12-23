@@ -23,6 +23,10 @@
 #define PTRACK_MAX_LEN	256
 #endif
 
+#ifndef ETHERTYPE_VLAN
+#define ETHERTYPE_VLAN 0x8100
+#endif
+
 struct ptrack_entry {
 	char * data;
 	int len;
