@@ -22,6 +22,7 @@ typedef struct oflops_context
 	int snaplen;
 
 	int control_fd;
+    struct msgbuf * control_outgoing;
 	int n_channels;
 	int max_channels;
 	struct channel_info * channels;	// control, send, recv,etc.

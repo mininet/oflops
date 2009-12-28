@@ -27,6 +27,8 @@ oflops_context * oflops_default_context(void)
 	ctx->n_channels=1;
 	ctx->max_channels=10;
 	ctx->channels = malloc_and_check(sizeof(struct channel_info)* ctx->max_channels);
+
+    ctx->control_outgoing = msgbuf_new(4096);       // dynamically sized
 	
 	ctx->snmp_channel_info = malloc_and_check(sizeof(struct snmp_channel));
 	ctx->snmp_channel_info->hostname = NULL;

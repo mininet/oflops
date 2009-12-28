@@ -127,7 +127,7 @@ void msgbuf_push(struct msgbuf *mbuf, char * buf, int count)
 {
     while((mbuf->end + count) > mbuf->len)
         msgbuf_grow(mbuf);
-    memcpy(&mbuf->buf[mbuf->start], buf, count);
+    memcpy(&mbuf->buf[mbuf->end], buf, count);
     mbuf->end += count;
 }
 

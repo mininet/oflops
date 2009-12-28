@@ -16,8 +16,10 @@ lib_LTLIBRARIES=liboflops_test.la
 liboflops_test_la_SOURCES= test_module.h  test_module.c \
 	msgbuf.c msgbuf.h \
 	pcap_track.c  pcap_track.h \
+	oflops_snmp.c oflops_snmp.h \
 	utils.h utils.c \
 	wc_event.h wc_event.c 
+liboflops_test_la_LIBADD=-lnetsnmp
 
 oflops_SOURCES= \
 	channel_info.h channel_info.c \
@@ -27,7 +29,6 @@ oflops_SOURCES= \
 	module_default.h  module_default.c \
 	oflops.c oflops.h \
 	oflops_pcap.h oflops_pcap.c \
-	oflops_snmp.c oflops_snmp.h \
 	timer_event.h timer_event.c \
 	usage.h usage.c 
 oflops_LDFLAGS=-static -Wl,-E

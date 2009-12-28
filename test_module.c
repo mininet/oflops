@@ -100,17 +100,9 @@ int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, 
 int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 {
 	int len = ntohs(ofph->length);
-	int err;
 
-	err = write(ctx->control_fd, ofph, len);
-	if(err<0)
-		perror_and_exit("send_of_mesg: write()",1);
-	if( err < len)
-	{
-		fprintf(stderr, "Short write on control channel (%d < %d) -- FIXME!", err, len);
-		abort();
-	}
-	return err;
+	msgbuf_push(ctx->control_outgoing, (void *) ofph, len);
+	return len;
 }
 
 /********************************************************************************
@@ -121,8 +113,7 @@ int oflops_send_of_mesg(struct oflops_context *ctx, struct ofp_header *ofph)
 int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, void * msg, int len)
 {
 	struct sockaddr_ll socket_address;
-	int send_result = 0;
-	int sock = oflops_get_channel_raw_fd(ctx,ch);
+	oflops_get_channel_raw_fd(ctx,ch);  // ensure that a raw sock is allocated
 
 	bzero(&socket_address,sizeof(socket_address));
 	socket_address.sll_family   = PF_PACKET;
@@ -136,12 +127,11 @@ int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, voi
 		socket_address.sll_pkttype  = PACKET_OTHERHOST;
 		*/
 
-	/*send the packet*/
-	send_result = sendto(sock, msg, len, 0,
-			(struct sockaddr*)&socket_address, sizeof(socket_address));
-	if (send_result == -1)
-		perror("oflops_send_raw_mesg(): sendto()");
-	return send_result;
+	/*queue the packet*/
+	msgbuf_push(ctx->channels[ch].outgoing, msg, len);
+	/* send_result = sendto(sock, msg, len, 0,  ***** old code
+			(struct sockaddr*)&socket_address, sizeof(socket_address));*/
+	return len;;
 }
 
 /**************************************************************************************
@@ -151,7 +141,8 @@ int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, voi
 int oflops_get_timestamp(struct oflops_context * ctx, void * data, int len, struct pcap_pkthdr * hdr, oflops_channel_name ofc)
 {
 	channel_info * ch  = &ctx->channels[ofc];
-	assert(ch->timestamps);
+	if(ch->timestamps == NULL)
+        return 0;       // not requested
 	return ptrack_lookup(ch->timestamps,data,len,hdr);
 }
 

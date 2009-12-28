@@ -82,15 +82,19 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		//Channels poll
 		for(ch=0; ch< ctx->n_channels; ch++)
 		{
+            poll_set[ch].fd = ctx->channels[ch].pcap_fd;
+            poll_set[ch].events = 0;
 			if( ctx->channels[ch].pcap_handle)
-			{
-				poll_set[ch].fd = ctx->channels[ch].pcap_fd;
 				poll_set[ch].events = POLLIN;
-				n_fds++;
-			}
+            if ( msgbuf_count_buffered(ctx->channels[ch].outgoing) > 0)
+                poll_set[ch].events |= POLLOUT;
+            if( poll_set[ch].events != 0)
+                n_fds++;
 		}
 		poll_set[n_fds].fd = ctx->control_fd;	// add the control channel at the end
 		poll_set[n_fds].events = POLLIN;
+        if ( msgbuf_count_buffered(ctx->control_outgoing) > 0)
+            poll_set[n_fds].events |= POLLOUT;
 		n_fds++;
 
 		//SNMP poll
@@ -177,7 +181,14 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
         buf = realloc_and_check(buf, buflen);
     }
 
-	assert(pfd->revents & POLLIN);		// FIXME: only know how to handle POLLIN events for now
+    if(pfd->revents & POLLOUT)
+    {
+        if(msgbuf_write(ctx->control_outgoing,ctx->control_fd) < 0)
+            perror_and_exit("control write()",1);
+    }
+
+	if(!(pfd->revents & POLLIN))		// nothing to read, return
+        return;
 	count = read(pfd->fd,&buf[bufend], buflen - bufend);
 	if(count < 0)
 	{
@@ -252,11 +263,20 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
  * 		make sure all of the memory is kosher before and after
  * 		pcap's callback thing has always annoyed me
  */
-static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *fd, oflops_channel_name ch)
+static void process_pcap_event(oflops_context *ctx, test_module * mod, struct pollfd *pfd, oflops_channel_name ch)
 {
 	struct pcap_event_wrapper wrap;
 	int count;
 
+    if(pfd->revents & POLLOUT)
+    {
+        int err;
+        if((err=msgbuf_write(ctx->channels[ch].outgoing,ctx->channels[ch].raw_sock) < 0) && 
+                (err != EAGAIN) && (err != EWOULDBLOCK ) && (err != EINTR))
+            perror_and_exit("channel write()",1);
+    }
+	if(!(pfd->revents & POLLIN))		// nothing to read, return
+        return;
 	// read the next packet from the appropriate pcap socket
 	assert(ctx->channels[ch].pcap_handle);
 	count = pcap_dispatch(ctx->channels[ch].pcap_handle, 1, oflops_pcap_handler, (u_char *) & wrap);
