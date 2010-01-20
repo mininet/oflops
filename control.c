@@ -12,6 +12,8 @@
 #include <sys/types.h>
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
+
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
@@ -71,6 +73,9 @@ int setup_control_channel(oflops_context *ctx)
 	flags = O_NONBLOCK;
 	if(fcntl(ctx->control_fd, F_SETFL, flags))
 		perror_and_exit("Dying on fcntl(control, O_NONBLOCK)",1);
+    fprintf( stderr, "Turning off @&^$!@# Nagle algorithm on control channel\n");
+    if(setsockopt(ctx->control_fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one)))
+        perror_and_exit("Dying on setsockopt(tcp_nodelay",1);
 	return 0;
 }
 
