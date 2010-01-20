@@ -135,6 +135,13 @@ typedef struct test_module
 
 // List of interfaces exposed from oflops to test_modules
 
+/** Send a buffer of openflow messages from the module to the switch along the control channel
+ * @param ctx	opaque pointer
+ * @param buf	pointer to an openflow header message (already in network byte order)
+ * @param buflen    length of the buffer
+ */
+size_t oflops_send_of_mesgs(struct oflops_context *ctx, char * buf, size_t buflen);
+
 /** Send an openflow message from the module to the switch along the control channel
  * @param ctx	opaque pointer
  * @param hdr	pointer to an openflow header message (already in network byte order)

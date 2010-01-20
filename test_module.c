@@ -91,6 +91,18 @@ int oflops_schedule_timer_event(struct oflops_context *ctx, struct timeval *tv, 
 
 
 /*****************************************************************************
+ * hook for the test module to send an openflow mesgs across the control channel 
+ * 	to the switch
+ * 	FIXME: assert()'s that the message doesn't block -- if this is a problem
+ * 	we need to implement some buffering and mod the select() call to open for
+ * 	writing
+ **/
+size_t oflops_send_of_mesgs(struct oflops_context *ctx, char * buf, size_t buflen)
+{
+	msgbuf_push(ctx->control_outgoing, buf, buflen);
+    return buflen;
+}
+/*****************************************************************************
  * hook for the test module to send an openflow mesg across the control channel 
  * 	to the switch
  * 	FIXME: assert()'s that the message doesn't block -- if this is a problem
