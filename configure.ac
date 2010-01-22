@@ -58,6 +58,23 @@ AC_PROG_DOXYGEN
 # Checks for header files.
 AC_CHECK_HEADERS([config.h net/bpf.h])
 
+# Check for the SNMP headers
+AC_CHECK_HEADERS([net-snmp/net-snmp-config.h], [],
+	[AC_MSG_ERROR(
+		[Could not find SNMP headers from net-snmp package -- please install]
+		,[1])
+	])
+AC_CHECK_HEADERS([net-snmp/net-snmp-includes.h], [],
+	[AC_MSG_ERROR(
+		[Could not find SNMP headers from net-snmp package -- please install]
+		,[1])
+	],
+	[
+#ifdef HAVE_NET_SNMP_NET_SNMP_CONFIG_H
+# include <net-snmp/net-snmp-config.h>
+#endif
+	])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 
