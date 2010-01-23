@@ -75,6 +75,29 @@ AC_CHECK_HEADERS([net-snmp/net-snmp-includes.h], [],
 #endif
 	])
 
+# Check whether we have ofp_flow_expired or ofp_flow_removed
+AC_EGREP_HEADER(ofp_flow_expired, [$OPENFLOWSRC/include/openflow/openflow.h],
+		[AC_DEFINE([HAVE_OFP_FLOW_EXPIRED], [],
+			   [Have ofp_flow_expired structure])
+		])
+AC_EGREP_HEADER(ofp_flow_removed, [$OPENFLOWSRC/include/openflow/openflow.h],
+		[AC_DEFINE([HAVE_OFP_FLOW_REMOVED], [],
+			   [Have ofp_flow_removed structure])
+		])
+
+# Check whether we have OFPT_FLOW_REMOVED/OFPT_FLOW_EXPIRED
+AC_EGREP_HEADER(OFPT_FLOW_EXPIRED, [$OPENFLOWSRC/include/openflow/openflow.h],
+	[],
+	[AC_EGREP_HEADER(OFPT_FLOW_REMOVED, [$OPENFLOWSRC/include/openflow/openflow.h],
+			[AC_DEFINE([OFPT_FLOW_EXPIRED], [OFPT_FLOW_REMOVED],
+				   [OFPT_FLOW_REMOVED substitute])
+			],
+			[AC_MSG_ERROR(
+			        [Could not find appropriate OFPT_FLOW_EXPIRED substitute in openflow.h]
+				,[1])
+			])
+	])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 

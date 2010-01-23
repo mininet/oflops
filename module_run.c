@@ -223,9 +223,9 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
                 mod->of_event_packet_in(ctx, (struct ofp_packet_in *)neobuf);
                 break;
             case OFPT_FLOW_EXPIRED:
-                #if OFP_VERSION == 0x97
+	        #ifdef HAVE_OFP_FLOW_EXPIRED
                     mod->of_event_flow_removed(ctx, (struct ofp_flow_expired *)neobuf);
-                #elif OFP_VERSION == 0x98
+	        #elif defined(HAVE_OFP_FLOW_REMOVED)
                     mod->of_event_flow_removed(ctx, (struct ofp_flow_removed *)neobuf);
                 #else
                     #error "Unknown version of openflow"

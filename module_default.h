@@ -17,9 +17,9 @@ int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_eve
 
 int default_module_of_event_packet_in(struct oflops_context *ctx, const struct ofp_packet_in * pktin);
 
-#if OFP_VERSION == 0x97
+#ifdef HAVE_OFP_FLOW_EXPIRED
 	int default_module_of_event_flow_removed(struct oflops_context *ctx, const struct ofp_flow_expired * ofph);
-#elif OFP_VERSION == 0x98
+#elif defined(HAVE_OFP_FLOW_REMOVED)
 	int default_module_of_event_flow_removed(struct oflops_context *ctx, const struct ofp_flow_removed * ofph);
 #else
 #error "Unknown version of openflow"

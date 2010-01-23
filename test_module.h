@@ -20,6 +20,7 @@ typedef enum oflops_channel_name {
 	OFLOPS_DATA8, 		// recving channel, e.g., eth2
 } oflops_channel_name;
 
+#include "config.h"
 #include "oflops.h"
 #include "oflops_pcap.h"
 #include "timer_event.h"
@@ -98,9 +99,9 @@ typedef struct test_module
 	 * @return 0 if success or -1 on error
      */
 	int (*of_event_packet_in)(struct oflops_context *ctx, const struct ofp_packet_in * ofph);
-	#if OFP_VERSION == 0x97
+	#ifdef HAVE_OFP_FLOW_EXPIRED
 		int (*of_event_flow_removed)(struct oflops_context *ctx, const struct ofp_flow_expired * ofph);
-	#elif OFP_VERSION == 0x98
+	#elif defined(HAVE_OFP_FLOW_REMOVED)
 		int (*of_event_flow_removed)(struct oflops_context *ctx, const struct ofp_flow_removed * ofph);
 	#else
 		#error "Unknown version of openflow"
