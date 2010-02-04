@@ -156,7 +156,8 @@ static int              make_features_reply(int id, int xid, char * buf, int buf
     features = (struct ofp_switch_features *) buf;
     features->header.version = OFP_VERSION;
     features->header.xid = xid;
-    features->datapath_id = id;
+    features->datapath_id = id + (id<<2) + (id<< 3) + (id << 4) + (id << 5);    // hack for nox; 
+                                                                        // make sure not just the top two bytes are non-zero
     return sizeof(fake);
 }
 /***********************************************************************/
