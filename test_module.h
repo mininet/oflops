@@ -2,6 +2,7 @@
 #define TEST_MODULE_H
 
 #include <openflow/openflow.h>
+#include "config.h"
 #include <pcap.h>
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
@@ -9,7 +10,7 @@
 struct test_module;
 	
 typedef enum oflops_channel_name {
-	OFLOPS_CONTROL,		// openflow control channel, e.g., eth0
+	OFLOPS_CONTROL = 0,		// openflow control channel, e.g., eth0
 	OFLOPS_DATA1,		// sending channel, e.g., eth1
 	OFLOPS_DATA2, 		// recving channel, e.g., eth2
 	OFLOPS_DATA3, 		// recving channel, e.g., eth2
@@ -20,7 +21,6 @@ typedef enum oflops_channel_name {
 	OFLOPS_DATA8, 		// recving channel, e.g., eth2
 } oflops_channel_name;
 
-#include "config.h"
 #include "oflops.h"
 #include "oflops_pcap.h"
 #include "timer_event.h"

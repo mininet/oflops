@@ -169,6 +169,9 @@ static void wc_schedule_next_event(wc_queue *pq)
 	qelm *data;
 	assert(pq->timersEnabled);	// should only be called when timers are enabled
 	assert(pq->size>0);
+
+	diff.tv_sec = diff.tv_usec = 0;
+
 	while(!wc_queue_isempty(pq))		
 	{
 		// grab first element
@@ -270,6 +273,8 @@ int wc_run_next_event(wc_queue * pq)
 	struct timeval key,now,diff;
 	static struct timeval last = {0,0};
 	int id;
+
+	diff.tv_sec = diff.tv_usec = 0;
 
 	if(wc_queue_isempty(pq))
 		return -1;				// event queue empty

@@ -40,7 +40,6 @@ int snmp_response(int operation, struct snmp_session *sp, int reqid,
   if (operation == NETSNMP_CALLBACK_OP_RECEIVED_MESSAGE)
   {
     struct snmp_event* se = malloc_and_check(sizeof(snmp_event));
-    struct variable_list *vp;
     se->pdu = pdu;
     se->reply = pdu->variables;
     ctx->curr_test->handle_snmp_event(ctx, se);

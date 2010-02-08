@@ -25,7 +25,7 @@ int run_test(int n_fakeswitches, struct fakeswitch * fakeswitches)
     struct timeval now, then, diff;
     struct  pollfd  * pollfds;
     int i;
-    double sum;
+    double sum = 0;
     double passed;
     int count;
 
@@ -63,7 +63,7 @@ int run_test(int n_fakeswitches, struct fakeswitch * fakeswitches)
 /********************************************************************************/
 
 int timeout_connect(int fd, const char * hostname, int port, int mstimeout) {
-	int ret;
+	int ret = 0;
 	int flags;
 	fd_set fds;
 	struct timeval tv;
