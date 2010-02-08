@@ -57,7 +57,7 @@ uint32_t sendno;
 struct timeval sendtime[65536];
 /** Receive time
  */
-struct timeval receivetime;
+struct timeval receivetime[65536];
 /** Receive toggle
  */
 uint32_t pcapreceiveseq = 0;
@@ -222,15 +222,15 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
  */
 int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in)
 {
+	// nothing to do here, see handle_pcap_event() below.
+	return 0;
+}
+
+static int record_time_diff (struct oflops_context *ctx, uint32_t seqno)
+{
   //Check receive sequence
-  uint32_t receiveno = (uint32_t) atoi((char *) &(pkt_in->data)[sizeof(struct ether_header)+sizeof(struct iphdr)]);
-  uint8_t et = *((uint8_t *) &(pkt_in->data)[23]);
-  if (et != 1)
-  {
-    fprintf(stderr, "Ether type %u received != %u sent\n", 
-	    et, 1);
-    return 0;
-  }  
+  uint32_t receiveno = seqno;
+  
   if (receiveno > sendno)
   {
     fprintf(stderr, "Send sequence %u < receive sequence %u => wtf!\n", 
@@ -244,7 +244,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 	    sendno, receiveno);
     return 0;
   }
-  if (pcapreceiveseq != receiveno)
+  if (pcapreceiveseq > receiveno)
   {
     fprintf(stderr, "OpenFlow packet's capture time is lost!");
     fprintf(stderr, "With seq %u recorded and %u wanted.\n",
@@ -254,7 +254,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 
   //Calculate time difference
   struct timeval timediff;
-  timersub(&receivetime, &(sendtime[((uint16_t) receiveno)]), &timediff);
+  timersub(&receivetime[(uint16_t)receiveno], &sendtime[(uint16_t)receiveno], &timediff);
   /*  if (timediff.tv_sec != 0)
   {
     fprintf(stderr, "Delay of > %u sec!\n", timediff.tv_sec);
@@ -266,8 +266,8 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 
   if (PACKET_IN_DEBUG)
   {
-    fprintf(stderr, "Got an of_packet_in event for seq %u on port %d with delay %ld.%.6ld\n", 
-	    receiveno, ntohs(pkt_in->in_port),
+    fprintf(stderr, "Got an of_packet_in event for seq %u with delay %ld.%.6ld\n", 
+	    receiveno,
 	    timediff.tv_sec, timediff.tv_usec);
     fprintf(stderr, "\twith %lld packets sent and %lld received.\n", 
 	    sendcounter, receivecounter);
@@ -309,18 +309,26 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
       fprintf(stderr, "Got data packet of length %u (seq %u) at %ld.%.6ld\n",
 	      pe->pcaphdr.caplen,
 	      sendno,
-	      receivetime.tv_sec, receivetime.tv_usec);      
+	      pe->pcaphdr.ts.tv_sec, pe->pcaphdr.ts.tv_usec);      
   }
   else if (ch == OFLOPS_CONTROL)
   {
     //See packet received
-    receivetime = pe->pcaphdr.ts;
+    uint8_t et = *((uint8_t *) &(pe->data)[107]);
+    if (et != 1)
+    {
+      fprintf(stderr, "Ether type %u received != %u sent\n", et, 1);
+      return 0;
+    }
+
     pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[118]);
+    receivetime[(uint16_t) pcapreceiveseq] = pe->pcaphdr.ts;
     if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
 	      pe->pcaphdr.len,
-	      receivetime.tv_sec, receivetime.tv_usec, 
+	      pe->pcaphdr.ts.tv_sec, pe->pcaphdr.ts.tv_usec, 
 	      pcapreceiveseq);
+    record_time_diff(ctx, pcapreceiveseq);
   }
   else
     fprintf(stderr, "wtf! why channel %u?", ch);
