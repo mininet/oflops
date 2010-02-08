@@ -125,7 +125,7 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		{
 			int i;	
 			for(i=0; i<n_fds; i++)
-				if(poll_set[i].revents & POLLIN)
+				if(poll_set[i].revents & (POLLIN | POLLOUT))
 					process_event(ctx, mod, &poll_set[i]);
 		}
 	}
