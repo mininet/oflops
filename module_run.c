@@ -82,13 +82,13 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 		//Channels poll
 		for(ch=0; ch< ctx->n_channels; ch++)
 		{
-            poll_set[ch].fd = ctx->channels[ch].pcap_fd;
-            poll_set[ch].events = 0;
+            poll_set[n_fds].fd = ctx->channels[ch].pcap_fd;
+            poll_set[n_fds].events = 0;
 			if( ctx->channels[ch].pcap_handle)
-				poll_set[ch].events = POLLIN;
+				poll_set[n_fds].events = POLLIN;
             if ( msgbuf_count_buffered(ctx->channels[ch].outgoing) > 0)
-                poll_set[ch].events |= POLLOUT;
-            if( poll_set[ch].events != 0)
+                poll_set[n_fds].events |= POLLOUT;
+            if( poll_set[n_fds].events != 0)
                 n_fds++;
 		}
 		poll_set[n_fds].fd = ctx->control_fd;	// add the control channel at the end
