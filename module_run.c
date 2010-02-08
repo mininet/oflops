@@ -99,9 +99,10 @@ static void test_module_loop(oflops_context *ctx, test_module *mod)
 
 		//SNMP poll
 		FD_ZERO(&fdset);
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 1000;
 		snmp_select_info(&fds, &fdset, &timeout, &snmpblock);
-		snmpblock = 0;
-		fds = select(fds, &fdset, NULL,NULL, snmpblock? NULL:&timeout);
+		fds = select(fds, &fdset, NULL,NULL, &timeout);
 		if (fds)
 			snmp_read(&fdset);
 		else
