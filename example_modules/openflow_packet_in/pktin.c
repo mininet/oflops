@@ -285,7 +285,7 @@ int of_event_packet_in(struct oflops_context *ctx, struct ofp_packet_in * pkt_in
 int get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
   if(ofc == OFLOPS_CONTROL)	// pcap dump the control channel
-    return snprintf(filter,buflen,"tcp dst port 6634");
+    return snprintf(filter,buflen,"tcp dst port 6633");
   else if(ofc == OFLOPS_DATA1)	// pcap dump data channel 1
     return snprintf(filter,buflen," ");
   else 
