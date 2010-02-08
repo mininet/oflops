@@ -39,6 +39,7 @@ int oflops_end_test(struct oflops_context *ctx,int should_continue)
 int oflops_get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name ch)
 {
 	struct ifreq ifr;
+	struct sockaddr_ll saddrll;
 	struct channel_info * ch_info;
 	if(ch >= ctx->n_channels)
 		return -1;	// no such channel
@@ -52,7 +53,13 @@ int oflops_get_channel_raw_fd(struct oflops_context * ctx, oflops_channel_name c
 	// bind to a specific port
 	strncpy(ifr.ifr_name,ch_info->dev,IFNAMSIZ);
 	if( ioctl( ch_info->raw_sock, SIOCGIFINDEX, &ifr)  == -1 )
-		perror_and_exit("ioctl() bind to dev",1);
+		perror_and_exit("ioctl()",1);
+	memset(&saddrll, 0, sizeof(saddrll));
+	saddrll.sll_family = AF_PACKET;
+	saddrll.sll_protocol = ETH_P_ALL;
+	saddrll.sll_ifindex = ifr.ifr_ifindex;
+	if ( bind(ch_info->raw_sock, (struct sockaddr *) &saddrll, sizeof(struct sockaddr_ll)) == -1 )
+		perror_and_exit("bind()",1);
 	return ch_info->raw_sock;
 }
 
