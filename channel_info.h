@@ -16,6 +16,7 @@ typedef struct channel_info {
 	int raw_sock;	// raw ethernet access fd
 	int sock;	// UDP socket
 	int ifindex;	// index of this device
+	int packet_len; // length of packet for equally chunked data transfer (0: don't chunk)
 	struct ptrack_list * timestamps;
     struct msgbuf * outgoing;
 } channel_info;

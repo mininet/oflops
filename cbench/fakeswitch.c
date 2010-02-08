@@ -42,7 +42,7 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
 
     // Send ofph
     msgbuf_push(fs->outbuf,(char * ) &ofph, sizeof(ofph));
-    msgbuf_write_all(fs->outbuf, fs->sock);
+    msgbuf_write_all(fs->outbuf, fs->sock, 0);
     if(fs->debug)
         fprintf(stderr, " sent hello");
     fflush(stderr);
@@ -87,7 +87,7 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
                 // Send features reply
                 count = make_features_reply(fs->id, ofph.xid, buf, BUFLEN);
                 msgbuf_push(fs->outbuf, buf, count);
-                msgbuf_write_all(fs->outbuf, fs->sock);
+                msgbuf_write_all(fs->outbuf, fs->sock, 0);
                 if(fs->debug)
                     fprintf(stderr, ", sent feature_rsp");
                 fflush(stderr);
@@ -255,7 +255,7 @@ void fakeswitch_handle_write(struct fakeswitch *fs)
     }
     // send any data if it's queued
     if( msgbuf_count_buffered(fs->outbuf) > 0)
-        msgbuf_write(fs->outbuf, fs->sock);
+        msgbuf_write(fs->outbuf, fs->sock, 0);
 }
 /***********************************************************************/
 void fakeswitch_handle_io(struct fakeswitch *fs, const struct pollfd *pfd)

@@ -37,6 +37,7 @@ int channel_info_init(struct channel_info * channel, char * dev)
 		perror_and_exit("SIOCGIFINDEX",1);
 
 	channel->ifindex = ifr.ifr_ifindex;
+	channel->packet_len = 0;
     channel->outgoing = msgbuf_new(4096);   // will get resized
 	close(dumb);
 	return 0;

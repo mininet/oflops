@@ -134,6 +134,8 @@ int oflops_send_raw_mesg(struct oflops_context *ctx, oflops_channel_name ch, voi
 	struct sockaddr_ll socket_address;
 	oflops_get_channel_raw_fd(ctx,ch);  // ensure that a raw sock is allocated
 
+	ctx->channels[ch].packet_len = len;
+
 	bzero(&socket_address,sizeof(socket_address));
 	socket_address.sll_family   = PF_PACKET;
 	socket_address.sll_protocol = htons(ETH_P_ALL);

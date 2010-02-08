@@ -184,7 +184,7 @@ static void process_control_event(oflops_context *ctx, test_module * mod, struct
 
     if(pfd->revents & POLLOUT)
     {
-        if(msgbuf_write(ctx->control_outgoing,ctx->control_fd) < 0)
+        if(msgbuf_write(ctx->control_outgoing,ctx->control_fd, 0) < 0)
             perror_and_exit("control write()",1);
     }
 
@@ -272,7 +272,7 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
     if(pfd->revents & POLLOUT)
     {
         int err;
-        if((err=msgbuf_write(ctx->channels[ch].outgoing,ctx->channels[ch].raw_sock) < 0) && 
+        if((err=msgbuf_write(ctx->channels[ch].outgoing,ctx->channels[ch].raw_sock, ctx->channels[ch].packet_len) < 0) && 
                 (err != EAGAIN) && (err != EWOULDBLOCK ) && (err != EINTR))
             perror_and_exit("channel write()",1);
     }

@@ -63,9 +63,17 @@ int msgbuf_read_all(struct msgbuf * mbuf, int sock, int len)
     return count;
 }
 /**********************************************************************/
-int msgbuf_write(struct msgbuf * mbuf, int sock)
+int msgbuf_write(struct msgbuf * mbuf, int sock, int len)
 {
-    int count = write(sock, &mbuf->buf[mbuf->start], mbuf->end - mbuf->start);
+	int send_len = mbuf->end - mbuf->start;
+	if (len > 0)
+	{
+		if (send_len < len)
+			return -1;
+		if (send_len > len)
+			send_len = len;
+	}
+    int count = write(sock, &mbuf->buf[mbuf->start], send_len);
     if(count>0)
         mbuf->start+=count;
     if(mbuf->start >= mbuf->end)
@@ -73,12 +81,12 @@ int msgbuf_write(struct msgbuf * mbuf, int sock)
     return count;
 }
 /**********************************************************************/
-int msgbuf_write_all(struct msgbuf * mbuf, int sock)
+int msgbuf_write_all(struct msgbuf * mbuf, int sock, int len)
 {
     int tmp=0,count=0;
     while(mbuf->start < mbuf->end)
     {
-        tmp=msgbuf_write(mbuf, sock);
+        tmp=msgbuf_write(mbuf, sock, len);
         if((tmp < 0) && 
                 (errno != EAGAIN) && 
                 (errno != EWOULDBLOCK) && 
