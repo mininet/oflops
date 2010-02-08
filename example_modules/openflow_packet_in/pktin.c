@@ -316,7 +316,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
     //See packet received
     receivetime = pe->pcaphdr.ts;
     pcapreceiveseq  = (uint32_t) atoi((char *)&(pe->data)[118]);
-    //if (PACKET_IN_DEBUG)
+    if (PACKET_IN_DEBUG)
       fprintf(stderr, "Got OpenFlow packet of length %u at %ld.%.6ld of seq %u\n", 
 	      pe->pcaphdr.len,
 	      receivetime.tv_sec, receivetime.tv_usec, 
