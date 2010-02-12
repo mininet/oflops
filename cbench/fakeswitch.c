@@ -18,7 +18,20 @@
 
 
 static int make_features_reply(int switch_id, int xid, char * buf, int buflen);
+#if OFP_VERSION == 0x01
+static int make_vendor_reply(int xid, char * buf, int buflen);
+#endif
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen);
+
+static inline uint64_t htonll(uint64_t n)
+{
+    return htonl(1) == 1 ? n : ((uint64_t) htonl(n) << 32) | htonl(n >> 32);
+}
+
+static inline uint64_t ntohll(uint64_t n)
+{
+    return htonl(1) == 1 ? n : ((uint64_t) ntohl(n) << 32) | ntohl(n >> 32);
+}
 
 void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
 {
@@ -27,6 +40,8 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
     struct ofp_header ofph;
     char buf[BUFLEN];
     int count;
+    int done = 0;
+    int toread_size;
     fs->sock = sock;
     fs->debug = debug;
     fs->id = ID++;
@@ -62,20 +77,21 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
     if(fs->debug)
         fprintf(stderr, ", got hello");
     fflush(stderr);
-    // Recv next msgs
-    count = msgbuf_count_buffered(fs->inbuf);
-    if(count < sizeof(ofph))
-    {
-        if(msgbuf_read_all(fs->inbuf, fs->sock, sizeof(ofph)) < 0)
-        {
-            perror("msgbuf_read_all");
-            exit(1);
-        }
-    }
 
-    while(msgbuf_count_buffered(fs->inbuf) > 0 )
+    while(!done)
     {
-        ofphptr  = msgbuf_peek( fs->inbuf);
+        // Recv next msgs
+        count = msgbuf_count_buffered(fs->inbuf);
+        toread_size = sizeof(struct ofp_header);
+        while (count < toread_size) {
+            msgbuf_read(fs->inbuf, fs->sock);
+            if ((count = msgbuf_count_buffered(fs->inbuf)) >= sizeof(struct ofp_header)) {
+                ofphptr = msgbuf_peek(fs->inbuf);
+                toread_size = htons(ofphptr->length);
+            }
+        }
+        ofphptr = msgbuf_peek(fs->inbuf);
+        assert(count >= htons(ofphptr->length));
         switch(ofphptr->type)
         {
             case OFPT_FEATURES_REQUEST:
@@ -85,23 +101,41 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
                     fprintf(stderr, ", got feature_req");
                 fflush(stderr);
                 // Send features reply
-                count = make_features_reply(fs->id, ofph.xid, buf, BUFLEN);
+                count = make_features_reply(fs->id, ofphptr->xid, buf, BUFLEN);
                 msgbuf_push(fs->outbuf, buf, count);
                 msgbuf_write_all(fs->outbuf, fs->sock, 0);
                 if(fs->debug)
                     fprintf(stderr, ", sent feature_rsp");
                 fflush(stderr);
+#if OFP_VERSION != 0x01
+                done=1;
+#endif
                 break;
             case OFPT_SET_CONFIG:
                 // pull msgs out of buffer
                 msgbuf_pull(fs->inbuf, NULL, sizeof(struct ofp_switch_config));
                 if(fs->debug)
-                    fprintf(stderr, ", got config ");
+                    fprintf(stderr, ", got config");
                 fflush(stderr);
                 break;
-            default:
+#if OFP_VERSION == 0x01
+            case OFPT_VENDOR:
+                // pull msgs out of buffer
+                msgbuf_pull(fs->inbuf, NULL, htons(ofphptr->length)); 
+                if (fs->debug)
+                    fprintf(stderr, ", got vendor");
+                fflush(stderr);
+                count = make_vendor_reply(ofphptr->xid, buf, BUFLEN);
+                msgbuf_push(fs->outbuf, buf, count);
+                msgbuf_write_all(fs->outbuf, fs->sock);
+                if (fs->debug)
+                    fprintf(stderr, ", sent vendor");
+                done = 1;
+                break;
+#endif
+             default:
                 fprintf(stderr, "Got unexpected openflow msg type %d on init: giving up..\n", ofph.type);
-            exit(1);
+                exit(1);
         };
     }
 }
@@ -156,10 +190,25 @@ static int              make_features_reply(int id, int xid, char * buf, int buf
     features = (struct ofp_switch_features *) buf;
     features->header.version = OFP_VERSION;
     features->header.xid = xid;
-    features->datapath_id = id + (id<<2) + (id<< 3) + (id << 4) + (id << 5);    // hack for nox; 
-                                                                        // make sure not just the top two bytes are non-zero
+    features->datapath_id = htonll(id);
     return sizeof(fake);
 }
+/***********************************************************************/
+#if OFP_VERSION == 0x01
+static int make_vendor_reply(int xid, char * buf, int buflen)
+{
+    struct ofp_error_msg * e;
+    assert(buflen> sizeof(struct ofp_error_msg));
+    e = (struct ofp_error_msg *) buf;
+    e->header.type = OFPT_ERROR;
+    e->header.version = OFP_VERSION;
+    e->header.length = htons(sizeof(struct ofp_error_msg));
+    e->header.xid = xid;
+    e->type = htons(OFPET_BAD_REQUEST);
+    e->code = htons(OFPBRC_BAD_VENDOR);
+    return sizeof(struct ofp_error_msg);
+}
+#endif
 /***********************************************************************/
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
 {
@@ -180,7 +229,9 @@ static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
     pi->header.version = OFP_VERSION;
     pi->buffer_id = htonl(buffer_id);
     eth = (struct ether_header * ) pi->data;
-    eth->ether_shost[5] = switch_id;     // mark this as coming from us, mostly for debug
+    // mark this as coming from us, mostly for debug
+    eth->ether_dhost[5] = switch_id;
+    eth->ether_shost[5] = switch_id;
     return sizeof(fake);
 }
 /***********************************************************************/
@@ -206,7 +257,7 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
         ofph = msgbuf_peek(fs->inbuf);
         if(count < ntohs(ofph->length))
             return;     // msg not all there yet
-        count = msgbuf_pull(fs->inbuf, buf, BUFLEN);
+        count = msgbuf_pull(fs->inbuf, buf, ofph->length);
         ofph = (struct ofp_header * ) buf;
         switch(ofph->type)
         {
