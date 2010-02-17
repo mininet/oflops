@@ -206,7 +206,12 @@ int main(int argc, char * argv[])
     int     i,j;
     
     /* parse args here */
-
+    if (argc > 1 ) 
+    {
+        debug = 1;
+        n_fakeswitches=1;
+        tests_per_loop=1; 
+    }
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
     assert(fakeswitches);
 
