@@ -7,12 +7,13 @@
 
 struct fakeswitch 
 {
-    int id;
-    int debug;
+    int id;                             // switch number
+    int debug;                          // do we print debug msgs?
     int sock;
-    struct msgbuf * inbuf, * outbuf;
-    int packet_sent;
-    int count;
+    struct msgbuf * inbuf, * outbuf;    // input,output buffers
+    int packet_sent;                    // flag: do we have a packet outstanding?
+    int count;                          // number of flow_mod's received
+    int ready_to_send;                  // are we ready to start sending packet_in's?
 };
 
 /*** Initialize an already allocated fakeswitch
