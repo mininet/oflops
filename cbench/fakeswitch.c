@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,7 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include <net/ethernet.h>
 
@@ -16,12 +18,11 @@
 #include "cbench.h"
 #include "fakeswitch.h"
 
-
+static int debug_msg(struct fakeswitch * fs, char * msg, ...);
 static int make_features_reply(int switch_id, int xid, char * buf, int buflen);
-#if OFP_VERSION == 0x01
 static int make_vendor_reply(int xid, char * buf, int buflen);
-#endif
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen);
+static void fakeswitch_handle_write(struct fakeswitch *fs);
 
 static inline uint64_t htonll(uint64_t n)
 {
@@ -36,12 +37,7 @@ static inline uint64_t ntohll(uint64_t n)
 void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
 {
     static int ID =1 ;
-    struct ofp_header * ofphptr;
     struct ofp_header ofph;
-    char buf[BUFLEN];
-    int count;
-    int done = 0;
-    int toread_size;
     fs->sock = sock;
     fs->debug = debug;
     fs->id = ID++;
@@ -49,95 +45,16 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
     fs->outbuf = msgbuf_new(bufsize);
     fs->packet_sent = 0;
     fs->count = 0;
+    fs->ready_to_send = 0;
 
     ofph.version = OFP_VERSION;
     ofph.type = OFPT_HELLO;
     ofph.length = htons(sizeof(ofph));
     ofph.xid   = htonl(1);
 
-    // Send ofph
+    // Send HELLO
     msgbuf_push(fs->outbuf,(char * ) &ofph, sizeof(ofph));
-    msgbuf_write_all(fs->outbuf, fs->sock, 0);
-    if(fs->debug)
-        fprintf(stderr, " sent hello");
-    fflush(stderr);
-
-    // Recv HELLO
-    if(msgbuf_read_all(fs->inbuf, fs->sock, sizeof(ofph)) < 0)
-    {
-        perror("msgbuf_read_all");
-        exit(1);
-    }
-    msgbuf_pull( fs->inbuf, (char * ) &ofph, sizeof(ofph));
-    if( ofph.type != OFPT_HELLO)
-    {
-        fprintf(stderr, "Got unexpected openflow msg type %d on init: giving up..\n", ofph.type);
-        exit(1);
-    }
-    if(fs->debug)
-        fprintf(stderr, ", got hello");
-    fflush(stderr);
-
-    while(!done)
-    {
-        // Recv next msgs
-        count = msgbuf_count_buffered(fs->inbuf);
-        toread_size = sizeof(struct ofp_header);
-        while (count < toread_size) {
-            msgbuf_read(fs->inbuf, fs->sock);
-            if ((count = msgbuf_count_buffered(fs->inbuf)) >= sizeof(struct ofp_header)) {
-                ofphptr = msgbuf_peek(fs->inbuf);
-                toread_size = htons(ofphptr->length);
-            }
-        }
-        ofphptr = msgbuf_peek(fs->inbuf);
-        assert(count >= htons(ofphptr->length));
-        switch(ofphptr->type)
-        {
-            case OFPT_FEATURES_REQUEST:
-                // pull msgs out of buffer
-                msgbuf_pull(fs->inbuf, NULL, sizeof(struct ofp_header));
-                if(fs->debug)
-                    fprintf(stderr, ", got feature_req");
-                fflush(stderr);
-                // Send features reply
-                count = make_features_reply(fs->id, ofphptr->xid, buf, BUFLEN);
-                msgbuf_push(fs->outbuf, buf, count);
-                msgbuf_write_all(fs->outbuf, fs->sock, 0);
-                if(fs->debug)
-                    fprintf(stderr, ", sent feature_rsp");
-                fflush(stderr);
-#if OFP_VERSION != 0x01
-                done=1;
-#endif
-                break;
-            case OFPT_SET_CONFIG:
-                // pull msgs out of buffer
-                msgbuf_pull(fs->inbuf, NULL, sizeof(struct ofp_switch_config));
-                if(fs->debug)
-                    fprintf(stderr, ", got config");
-                fflush(stderr);
-                break;
-#if OFP_VERSION == 0x01
-            case OFPT_VENDOR:
-                // pull msgs out of buffer
-                msgbuf_pull(fs->inbuf, NULL, htons(ofphptr->length)); 
-                if (fs->debug)
-                    fprintf(stderr, ", got vendor");
-                fflush(stderr);
-                count = make_vendor_reply(ofphptr->xid, buf, BUFLEN);
-                msgbuf_push(fs->outbuf, buf, count);
-                msgbuf_write_all(fs->outbuf, fs->sock);
-                if (fs->debug)
-                    fprintf(stderr, ", sent vendor");
-                done = 1;
-                break;
-#endif
-             default:
-                fprintf(stderr, "Got unexpected openflow msg type %d on init: giving up..\n", ofph.type);
-                exit(1);
-        };
-    }
+    debug_msg(fs, " sent hello");
 }
 
 /***********************************************************************/
@@ -155,7 +72,7 @@ int fakeswitch_get_count(struct fakeswitch *fs)
     int ret = fs->count;
     fs->count = 0;
     fs->packet_sent = 0;
-    usleep(100000); // sleep for 100 ms
+    usleep(100000); // sleep for 100 ms, to let packets queue
     msgbuf_read(fs->inbuf,fs->sock);     // try to clear out anything in the queue
     msgbuf_clear(fs->inbuf);
     msgbuf_clear(fs->outbuf);
@@ -194,7 +111,6 @@ static int              make_features_reply(int id, int xid, char * buf, int buf
     return sizeof(fake);
 }
 /***********************************************************************/
-#if OFP_VERSION == 0x01
 static int make_vendor_reply(int xid, char * buf, int buflen)
 {
     struct ofp_error_msg * e;
@@ -208,7 +124,6 @@ static int make_vendor_reply(int xid, char * buf, int buflen)
     e->code = htons(OFPBRC_BAD_VENDOR);
     return sizeof(struct ofp_error_msg);
 }
-#endif
 /***********************************************************************/
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
 {
@@ -252,12 +167,12 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
         fprintf(stderr, "... exiting\n");
         exit(1);
     }
-    while((count= msgbuf_count_buffered(fs->inbuf)) > sizeof(struct ofp_header ))
+    while((count= msgbuf_count_buffered(fs->inbuf)) >= sizeof(struct ofp_header ))
     {
         ofph = msgbuf_peek(fs->inbuf);
         if(count < ntohs(ofph->length))
             return;     // msg not all there yet
-        count = msgbuf_pull(fs->inbuf, buf, ofph->length);
+        msgbuf_pull(fs->inbuf, buf, ntohs(ofph->length));
         ofph = (struct ofp_header * ) buf;
         switch(ofph->type)
         {
@@ -271,31 +186,57 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 }
                 else 
                 {
-                    if(fs->debug)
-                        fprintf(stderr, "Ignoring unsolicited flow_mod %d was looking for %d \n", 
+                        debug_msg(fs, "Ignoring unsolicited flow_mod %d was looking for %d \n", 
                                     ntohl(fm->buffer_id),
                                     fs->packet_sent);
                 }
                 break;
+            case OFPT_FEATURES_REQUEST:
+                // pull msgs out of buffer
+                debug_msg(fs, "got feature_req");
+                // Send features reply
+                count = make_features_reply(fs->id, ofph->xid, buf, BUFLEN);
+                msgbuf_push(fs->outbuf, buf, count);
+                debug_msg(fs, "sent feature_rsp");
+                fs->ready_to_send = 1;
+                break;
+            case OFPT_SET_CONFIG:
+                // pull msgs out of buffer
+                debug_msg(fs, "got config");
+                break;
+            case OFPT_VENDOR:
+                // pull msgs out of buffer
+                debug_msg(fs, "got vendor");
+                count = make_vendor_reply(ofph->xid, buf, BUFLEN);
+                msgbuf_push(fs->outbuf, buf, count);
+                debug_msg(fs, "sent vendor");
+                break;
+            case OFPT_HELLO:
+                debug_msg(fs, "got hello");
+                // we already sent our own HELLO; don't respond
+                break;
             case OFPT_ECHO_REQUEST:
+                debug_msg(fs, "got echo, sent echo_resp");
                 echo.version= OFP_VERSION;
                 echo.length = htons(sizeof(echo));
                 echo.type   = OFPT_ECHO_REPLY;
                 echo.xid = ofph->xid;
+                msgbuf_push(fs->outbuf,(char *) &echo, sizeof(echo));
                 break;
             default: 
                 if(fs->debug)
                     fprintf(stderr, "Ignoring OpenFlow message type %d\n", ofph->type);
         };
+        fakeswitch_handle_write(fs);        // flush any queued messages now, for efficency
     }
 }
 /***********************************************************************/
-void fakeswitch_handle_write(struct fakeswitch *fs)
+static void fakeswitch_handle_write(struct fakeswitch *fs)
 {
     static int BUFFER_ID=256;
     char buf[BUFLEN];
     int count ;
-    if( fs->packet_sent == 0)
+    if( (fs->ready_to_send == 1)  && ( fs->packet_sent == 0 ))
     {
         // queue up packet
         if(BUFFER_ID < 256)     // prevent wrapping
@@ -316,4 +257,17 @@ void fakeswitch_handle_io(struct fakeswitch *fs, const struct pollfd *pfd)
     if(pfd->revents & POLLOUT)
         fakeswitch_handle_write(fs);
 }
-
+/************************************************************************/
+static int debug_msg(struct fakeswitch * fs, char * msg, ...)
+{
+    va_list aq;
+    if(fs->debug == 0 )
+        return 0;
+    fprintf(stderr,"\n-------Switch %d: ", fs->id);
+    va_start(aq,msg);
+    vfprintf(stderr,msg,aq);
+    if(msg[strlen(msg)-1] != '\n')
+        fprintf(stderr, "\n");
+    // fflush(stderr);     // should be redundant, but often isn't :-(
+    return 1;
+}
