@@ -106,7 +106,6 @@ AC_CHECK_FUNCS([strerror])
 
 
 AC_CONFIG_FILES([Makefile \
-		doc/Makefile
 		doc/doxygen.conf\
 		cbench/Makefile \
 		example_modules/Makefile \
