@@ -235,6 +235,8 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 count = make_vendor_reply(ofph->xid, buf, BUFLEN);
                 msgbuf_push(fs->outbuf, buf, count);
                 debug_msg(fs, "sent vendor");
+                // apply nox hack; nox ignores packet_in until this msg is sent
+                fs->packet_sent=0;
                 break;
             case OFPT_HELLO:
                 debug_msg(fs, "got hello");
