@@ -61,9 +61,9 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
 
 void fakeswitch_set_pollfd(struct fakeswitch *fs, struct pollfd *pfd)
 {
-    pfd->events = POLLIN;
-    if(msgbuf_count_buffered(fs->outbuf) > 0)
-        pfd->events |= POLLOUT;
+    pfd->events = POLLIN|POLLOUT;
+    /* if(msgbuf_count_buffered(fs->outbuf) > 0)
+        pfd->events |= POLLOUT; */
     pfd->fd = fs->sock;
 }
 
@@ -252,8 +252,8 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 if(fs->debug)
                     fprintf(stderr, "Ignoring OpenFlow message type %d\n", ofph->type);
         };
-        fakeswitch_handle_write(fs);        // flush any queued messages now, for efficency
     }
+    fakeswitch_handle_write(fs);        // flush any queued messages now, for efficency
 }
 /***********************************************************************/
 static void fakeswitch_handle_write(struct fakeswitch *fs)
