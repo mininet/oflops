@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -19,8 +21,41 @@
 #include "cbench.h"
 #include "fakeswitch.h"
 
+static struct option long_options[] = {
+    {"controller",  1, 0,  'c'},
+    {"debug",       0, 0,  'd'},
+    {"help",        0, 0,  'h'},
+    {"loops",       1, 0,  'l'},
+    {"ms-per-test", 1, 0,  'm'},
+    {"only",        0, 0,  'o'},
+    {"port",        1, 0,  'p'},
+    {"switches",    1, 0,  's'},
+    {0, 0, 0, 0}
+};
 
-int run_test(int n_fakeswitches, struct fakeswitch * fakeswitches)
+/*******************************************************************/
+void usage(char * s1, char * s2)
+{
+    struct option * optptr;
+    if(s1)
+        fprintf(stderr, "%s", s1);
+    if(s2)
+        fprintf(stderr, " %s", s2);
+    if (s1 || s2)
+        fprintf(stderr, "\n");
+    fprintf(stderr, "USAGE: cbench [options]\n");
+
+    for( optptr = &long_options[0]; optptr->name != NULL ; optptr++)
+        fprintf(stderr, "   --%s/-%c %s\n", optptr->name, optptr->val,
+                optptr->has_arg ? "arg" : "");
+
+    fprintf(stderr, "\n");
+    exit(1);
+
+
+}
+/*******************************************************************/
+double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen)
 {
     struct timeval now, then, diff;
     struct  pollfd  * pollfds;
@@ -36,12 +71,12 @@ int run_test(int n_fakeswitches, struct fakeswitch * fakeswitches)
     {
         gettimeofday(&now, NULL);
         timersub(&now, &then, &diff);
-        if( diff.tv_sec > 0)
+        if( (1000* diff.tv_sec  + (float)diff.tv_usec/1000)> mstestlen)
             break;
         for(i = 0; i< n_fakeswitches; i++)
             fakeswitch_set_pollfd(&fakeswitches[i], &pollfds[i]);
 
-        poll(pollfds, n_fakeswitches, -1);      // block until something is ready
+        poll(pollfds, n_fakeswitches, 1000);      // block until something is ready or 100ms passes
 
         for(i = 0; i< n_fakeswitches; i++)
             fakeswitch_handle_io(&fakeswitches[i], &pollfds[i]);
@@ -53,11 +88,11 @@ int run_test(int n_fakeswitches, struct fakeswitch * fakeswitches)
         printf("%d  ", count);
         sum += count;
     }
-    passed = 1000 * diff.tv_sec + diff.tv_usec/1000;   
+    passed = 1000 * diff.tv_sec + (double)diff.tv_usec/1000;   
     sum /= passed;  // is now per ms
     printf(" total = %lf per ms \n", sum);
     free(pollfds);
-    return 0;
+    return sum;
 }
 
 /********************************************************************************/
@@ -195,29 +230,81 @@ int count_bits(int n)
     return count;
 }
 /********************************************************************************/
+
+
+
+
+
 int main(int argc, char * argv[])
 {
     char *  controller_hostname = "localhost";
     int     controller_port      = OFP_TCP_PORT;
     struct  fakeswitch *fakeswitches;
     int     n_fakeswitches= 16;
-    int     tests_per_loop = 5;
+    int     mstestlen = 1000;
+    int     should_test_range=1;
+    int     tests_per_loop = 10;
     int     debug = 0;
     int     i,j;
     
     /* parse args here */
-    if (argc > 1 ) 
+    while(1)
     {
-        debug = 1;
-        n_fakeswitches=1;
-        tests_per_loop=1; 
+        int c;
+        int option_index=0;
+        c = getopt_long(argc, argv, "c:dl:m:op:s:",
+                long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) 
+        {
+            case 'c' :  
+                controller_hostname = strdup(optarg);
+                break;
+            case 'd':
+                debug = 1;
+                break;
+            case 'h': 
+                usage("help message", NULL);
+                break;
+            case 'l': 
+                tests_per_loop = atoi(optarg);
+                break;
+            case 'm': 
+                mstestlen = atoi(optarg);
+                break;
+            case 'o':
+                should_test_range = 0;
+                break;
+            case 'p' : 
+                controller_port = atoi(optarg);
+                break;
+            case 's': 
+                n_fakeswitches = atoi(optarg);
+                break;
+            default: 
+                usage("unknown arg", argv[optind]);
+        }
     }
+    fprintf(stderr, "cbench: controller benchmarking tool\n"
+                "   connecting to controller at %s:%d \n"
+                "   faking%s %d switches :: %d tests each; %d ms per test\n"
+                "   debugging info is %s\n",
+                controller_hostname,
+                controller_port,
+                should_test_range ? " from 1 to": "",
+                n_fakeswitches,
+                tests_per_loop,
+                mstestlen,
+                debug == 1 ? "on" : "off");
+    /* done parsing args */
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
     assert(fakeswitches);
 
     for( i = 0; i < n_fakeswitches; i++)
     {
         int sock;
+        double sum = 0;
         sock = make_tcp_connection(controller_hostname, controller_port,3000);
         if(sock < 0 )
         {
@@ -231,9 +318,16 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);
-        if(count_bits(i+1) == 1)  // only test for 1,2,4,8,16 switches
-            for( j = 0; j < tests_per_loop; j ++)
-                run_test(i+1, fakeswitches);
+        if(count_bits(i+1) == 0)  // only test for 1,2,4,8,16 switches
+            continue;
+        if(!should_test_range && ((i+1) != n_fakeswitches)) // only if testing range or this is last
+            continue;
+        for( j = 0; j < tests_per_loop; j ++)
+            sum += run_test(i+1, fakeswitches,mstestlen);
+        printf("RESULT: %d switches avg of %d tests == %lf resps/second\n", 
+                i+1,
+                tests_per_loop,
+                1000.0*sum/tests_per_loop);
     }
 
     return 0;

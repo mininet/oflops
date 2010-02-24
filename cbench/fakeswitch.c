@@ -61,7 +61,9 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
 
 void fakeswitch_set_pollfd(struct fakeswitch *fs, struct pollfd *pfd)
 {
-    pfd->events = POLLIN|POLLOUT;
+    pfd->events = POLLIN;
+    if(msgbuf_count_buffered(fs->outbuf) > 0)
+        pfd->events |= POLLOUT;
     pfd->fd = fs->sock;
 }
 
@@ -71,11 +73,13 @@ int fakeswitch_get_count(struct fakeswitch *fs)
 {
     int ret = fs->count;
     fs->count = 0;
-    fs->packet_sent = 0;
+    fs->packet_sent = 0;        // reset packet state
     usleep(100000); // sleep for 100 ms, to let packets queue
     msgbuf_read(fs->inbuf,fs->sock);     // try to clear out anything in the queue
     msgbuf_clear(fs->inbuf);
     msgbuf_clear(fs->outbuf);
+    // start the next send event
+    fakeswitch_handle_write(fs);
     return ret;
 }
 
@@ -127,6 +131,7 @@ static int make_vendor_reply(int xid, char * buf, int buflen)
 /***********************************************************************/
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
 {
+    static unsigned int uniquemac=0;
     struct ofp_packet_in * pi;
     struct ether_header * eth;
     const char fake[] = {
@@ -144,6 +149,10 @@ static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
     pi->header.version = OFP_VERSION;
     pi->buffer_id = htonl(buffer_id);
     eth = (struct ether_header * ) pi->data;
+    // copy into src mac addr; only 4 bytes, but should suffice to not confuse
+    // the controller; don't overwrite first byte
+    uniquemac++;       // make sure the mac addr is (kinda) unique
+    memcpy(&eth->ether_shost[1], &uniquemac, sizeof(uniquemac));   
     // mark this as coming from us, mostly for debug
     eth->ether_dhost[5] = switch_id;
     eth->ether_shost[5] = switch_id;
@@ -177,9 +186,25 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
         switch(ofph->type)
         {
             struct ofp_flow_mod * fm;
+            struct ofp_packet_out *po;
+            case OFPT_PACKET_OUT:
+                po = (struct ofp_packet_out *) ofph;
+                if(ntohl(po->buffer_id) == fs->packet_sent)
+                {
+                    fs->count++;        // got response to what we went
+                    fs->packet_sent = 0;
+                }
+                else 
+                {
+                    if(po->buffer_id != htonl(-1))
+                        debug_msg(fs, "Ignoring unsolicited packet_out %d was looking for %d \n", 
+                                    ntohl(po->buffer_id),
+                                    fs->packet_sent);
+                }
+                break;
             case OFPT_FLOW_MOD:
                 fm = (struct ofp_flow_mod *) ofph;
-                if(ntohl(fm->buffer_id) == fs->packet_sent)
+                if((fm->command== htons(OFPFC_ADD) ) && (ntohl(fm->buffer_id) == fs->packet_sent))
                 {
                     fs->count++;        // got response to what we went
                     fs->packet_sent = 0;
