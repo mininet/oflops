@@ -39,7 +39,7 @@ oflops_LDFLAGS=-static -Wl,-E
 SUBDIRS = . example_modules cbench doc
 
 docs: 
-	$(MAKE) -c doc docs
+	$(MAKE) -C doc docs
 
 count: 
 	@wc -l `find . -name \*.c -o -name \*.h -o -name Makefile.am` | sort -n

@@ -1,6 +1,7 @@
             OFLOPS: OpenFLow Operations Per Second
 
-           A benchmarking suite for openflow switches.
+A benchmarking suite for openflow switches.  If you are looking
+to benchmark controllers, check out ./cbench included with this package.
 
 -------------------          SUMMARY               --------------------
 
