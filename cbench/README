@@ -15,10 +15,11 @@ packet that should get a response from a controller.  Would be
 nice to evaluate more, but this is at least something.
 
 
-To run, run a controller on the local machine on port 6633, and 
+Quick start: run a controller on the local machine on port 6633, and 
 launch cbench without arguments.
 
-TODO: need to add cmdline parsing to change default params
+Longer start: change test params
+
 ---------------------------------------------------------------------
 Sample output from simple controller in OpenFlow reference suite
 
