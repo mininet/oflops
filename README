@@ -14,10 +14,18 @@ own tests.
 -------------------       QUICK INSTALL            --------------------
 
 sh boot.sh          #   if no ./configure file
-./configure
+./configure --with-openflow-src-dir=/path/to/openflow
 make
 make docs           # build API documentation in ./doc
 make install
+
+oflops assumes you have snmp-utils installed:
+TODO: make this optional!
+
+debian:
+    sudo apt-get install libsnmp-dev
+fedora/centos:
+    sudo yum install net-snmp-devel
 
 -------------------  QUICK RUN : local software switch --------------------
 
