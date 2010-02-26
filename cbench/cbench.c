@@ -18,42 +18,25 @@
 
 #include <openflow/openflow.h>
 
+#include "myargs.h"
 #include "cbench.h"
 #include "fakeswitch.h"
 
-static struct option long_options[] = {
-    {"controller",  1, 0,  'c'},
-    {"debug",       0, 0,  'd'},
-    {"help",        0, 0,  'h'},
-    {"loops",       1, 0,  'l'},
-    {"ms-per-test", 1, 0,  'm'},
-    {"only",        0, 0,  'o'},
-    {"port",        1, 0,  'p'},
-    {"switches",    1, 0,  's'},
+
+
+
+struct myargs my_options[] = {
+    {"controller",  'c', "hostname of controller to connect to", MYARGS_STRING, {.string = "localhost"}},
+    {"debug",       'd', "enable debugging", MYARGS_FLAG, {.flag = 0}},
+    {"help",        'h', "print this message", MYARGS_NONE, {.none = 0}},
+    {"loops",       'l', "loops per test",   MYARGS_INTEGER, {.integer = 16}},
+    {"ms-per-test", 'm', "test length in ms", MYARGS_INTEGER, {.integer = 1000}},
+    {"port",        'p', "controller port",  MYARGS_INTEGER, {.integer = OFP_TCP_PORT}},
+    {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
+    {"switches",    's', "fake $n switches", MYARGS_INTEGER, {.integer = 16}},
     {0, 0, 0, 0}
 };
 
-/*******************************************************************/
-void usage(char * s1, char * s2)
-{
-    struct option * optptr;
-    if(s1)
-        fprintf(stderr, "%s", s1);
-    if(s2)
-        fprintf(stderr, " %s", s2);
-    if (s1 || s2)
-        fprintf(stderr, "\n");
-    fprintf(stderr, "USAGE: cbench [options]\n");
-
-    for( optptr = &long_options[0]; optptr->name != NULL ; optptr++)
-        fprintf(stderr, "   --%s/-%c %s\n", optptr->name, optptr->val,
-                optptr->has_arg ? "arg" : "");
-
-    fprintf(stderr, "\n");
-    exit(1);
-
-
-}
 /*******************************************************************/
 double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen)
 {
@@ -233,27 +216,30 @@ int count_bits(int n)
 
 
 
-
+#define PROG_TITLE "USAGE: cbench [option]  # by Rob Sherwood 2010"
 
 int main(int argc, char * argv[])
 {
-    char *  controller_hostname = "localhost";
-    int     controller_port      = OFP_TCP_PORT;
     struct  fakeswitch *fakeswitches;
-    int     n_fakeswitches= 16;
-    int     mstestlen = 1000;
-    int     should_test_range=1;
-    int     tests_per_loop = 10;
-    int     debug = 0;
+
+    char *  controller_hostname = myargs_get_default_string(my_options,"controller");
+    int     controller_port      = myargs_get_default_integer(my_options, "port");
+    int     n_fakeswitches= myargs_get_default_integer(my_options, "switches");
+    int     mstestlen = myargs_get_default_integer(my_options, "ms-per-test");
+    int     should_test_range=myargs_get_default_flag(my_options, "ranged-test");
+    int     tests_per_loop = myargs_get_default_integer(my_options, "loops");
+    int     debug = myargs_get_default_flag(my_options, "debug");
     int     i,j;
+
+    const struct option * long_opts = myargs_to_long(my_options);
+    char * short_opts = myargs_to_short(my_options);
     
     /* parse args here */
     while(1)
     {
         int c;
         int option_index=0;
-        c = getopt_long(argc, argv, "c:dl:m:op:s:",
-                long_options, &option_index);
+        c = getopt_long(argc, argv, short_opts, long_opts, &option_index);
         if (c == -1)
             break;
         switch (c) 
@@ -265,7 +251,7 @@ int main(int argc, char * argv[])
                 debug = 1;
                 break;
             case 'h': 
-                usage("help message", NULL);
+                myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
                 break;
             case 'l': 
                 tests_per_loop = atoi(optarg);
@@ -273,8 +259,8 @@ int main(int argc, char * argv[])
             case 'm': 
                 mstestlen = atoi(optarg);
                 break;
-            case 'o':
-                should_test_range = 0;
+            case 'r':
+                should_test_range = 1;
                 break;
             case 'p' : 
                 controller_port = atoi(optarg);
@@ -283,7 +269,7 @@ int main(int argc, char * argv[])
                 n_fakeswitches = atoi(optarg);
                 break;
             default: 
-                usage("unknown arg", argv[optind]);
+                myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
     }
     fprintf(stderr, "cbench: controller benchmarking tool\n"
