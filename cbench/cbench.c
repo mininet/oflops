@@ -34,6 +34,7 @@ struct myargs my_options[] = {
     {"port",        'p', "controller port",  MYARGS_INTEGER, {.integer = OFP_TCP_PORT}},
     {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
     {"switches",    's', "fake $n switches", MYARGS_INTEGER, {.integer = 16}},
+    {"throughput",  't', "test throughput instead of latency", MYARGS_NONE, {.none = 0}},
     {0, 0, 0, 0}
 };
 
@@ -229,6 +230,7 @@ int main(int argc, char * argv[])
     int     should_test_range=myargs_get_default_flag(my_options, "ranged-test");
     int     tests_per_loop = myargs_get_default_integer(my_options, "loops");
     int     debug = myargs_get_default_flag(my_options, "debug");
+    int     mode = MODE_LATENCY;
     int     i,j;
 
     const struct option * long_opts = myargs_to_long(my_options);
@@ -268,6 +270,9 @@ int main(int argc, char * argv[])
             case 's': 
                 n_fakeswitches = atoi(optarg);
                 break;
+            case 't': 
+                mode = MODE_THROUGHPUT;
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
@@ -300,7 +305,7 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr,"Initializing switch %d ... ", i+1);
         fflush(stderr);
-        fakeswitch_init(&fakeswitches[i],sock,65536, debug);
+        fakeswitch_init(&fakeswitches[i],sock,65536, debug, mode);
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);

@@ -34,7 +34,7 @@ static inline uint64_t ntohll(uint64_t n)
     return htonl(1) == 1 ? n : ((uint64_t) ntohl(n) << 32) | ntohl(n >> 32);
 }
 
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode)
 {
     static int ID =1 ;
     struct ofp_header ofph;
@@ -43,7 +43,8 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug)
     fs->id = ID++;
     fs->inbuf = msgbuf_new(bufsize);
     fs->outbuf = msgbuf_new(bufsize);
-    fs->packet_sent = 0;
+    fs->probe_state = 0;
+    fs->mode = mode;
     fs->count = 0;
     fs->ready_to_send = 0;
 
@@ -73,11 +74,14 @@ int fakeswitch_get_count(struct fakeswitch *fs)
 {
     int ret = fs->count;
     fs->count = 0;
-    fs->packet_sent = 0;        // reset packet state
+    fs->probe_state = 0;        // reset packet state
     usleep(100000); // sleep for 100 ms, to let packets queue
     msgbuf_read(fs->inbuf,fs->sock);     // try to clear out anything in the queue
-    msgbuf_clear(fs->inbuf);
-    msgbuf_clear(fs->outbuf);
+    if(fs->mode != MODE_THROUGHPUT)
+    {
+        msgbuf_clear(fs->inbuf);
+        msgbuf_clear(fs->outbuf);
+    }
     // start the next send event
     fakeswitch_handle_write(fs);
     return ret;
@@ -189,31 +193,16 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
             struct ofp_packet_out *po;
             case OFPT_PACKET_OUT:
                 po = (struct ofp_packet_out *) ofph;
-                if(ntohl(po->buffer_id) == fs->packet_sent)
-                {
-                    fs->count++;        // got response to what we went
-                    fs->packet_sent = 0;
-                }
-                else 
-                {
-                    if(po->buffer_id != htonl(-1))
-                        debug_msg(fs, "Ignoring unsolicited packet_out %d was looking for %d \n", 
-                                    ntohl(po->buffer_id),
-                                    fs->packet_sent);
-                }
+                // assume this is in response to what we sent
+                fs->count++;        // got response to what we went
+                fs->probe_state--;
                 break;
             case OFPT_FLOW_MOD:
                 fm = (struct ofp_flow_mod *) ofph;
-                if((fm->command== htons(OFPFC_ADD) ) && (ntohl(fm->buffer_id) == fs->packet_sent))
+                if(fm->command== htons(OFPFC_ADD) )
                 {
                     fs->count++;        // got response to what we went
-                    fs->packet_sent = 0;
-                }
-                else 
-                {
-                        debug_msg(fs, "Ignoring unsolicited flow_mod %d was looking for %d \n", 
-                                    ntohl(fm->buffer_id),
-                                    fs->packet_sent);
+                    fs->probe_state--;
                 }
                 break;
             case OFPT_FEATURES_REQUEST:
@@ -236,7 +225,7 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 msgbuf_push(fs->outbuf, buf, count);
                 debug_msg(fs, "sent vendor");
                 // apply nox hack; nox ignores packet_in until this msg is sent
-                fs->packet_sent=0;
+                fs->probe_state=0;
                 break;
             case OFPT_HELLO:
                 debug_msg(fs, "got hello");
@@ -254,6 +243,12 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 if(fs->debug)
                     fprintf(stderr, "Ignoring OpenFlow message type %d\n", ofph->type);
         };
+        if(fs->probe_state < 0)
+        {
+                debug_msg(fs, "WARN: Got more responses than probes!!: : %d",
+                            fs->probe_state);
+                fs->probe_state =0;
+        }
     }
     fakeswitch_handle_write(fs);        // flush any queued messages now, for efficency
 }
@@ -263,15 +258,18 @@ static void fakeswitch_handle_write(struct fakeswitch *fs)
     static int BUFFER_ID=256;
     char buf[BUFLEN];
     int count ;
-    if( (fs->ready_to_send == 1)  && ( fs->packet_sent == 0 ))
-    {
-        // queue up packet
-        if(BUFFER_ID < 256)     // prevent wrapping
-            BUFFER_ID = 256;
-        fs->packet_sent = BUFFER_ID++;
-        count = make_packet_in(fs->id, fs->packet_sent, buf, BUFLEN);
-        msgbuf_push(fs->outbuf, buf, count);
-    }
+    if( fs->ready_to_send == 1)
+        while(   ((fs->mode == MODE_LATENCY)  && ( fs->probe_state == 0 )) ||     // just send one packet
+                ((fs->mode == MODE_THROUGHPUT) && (msgbuf_count_buffered(fs->outbuf) < 65536))  // keep buffer full
+             )
+        {
+            // queue up packet
+            if(BUFFER_ID < 256)     // prevent wrapping
+                BUFFER_ID = 256;
+            fs->probe_state++;
+            count = make_packet_in(fs->id, fs->probe_state, buf, BUFLEN);
+            msgbuf_push(fs->outbuf, buf, count);
+        }
     // send any data if it's queued
     if( msgbuf_count_buffered(fs->outbuf) > 0)
         msgbuf_write(fs->outbuf, fs->sock, 0);

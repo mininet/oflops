@@ -5,14 +5,21 @@
 
 #include "msgbuf.h"
 
+enum test_mode 
+{
+    MODE_LATENCY, MODE_THROUGHPUT
+};
+
 struct fakeswitch 
 {
     int id;                             // switch number
     int debug;                          // do we print debug msgs?
     int sock;
     struct msgbuf * inbuf, * outbuf;    // input,output buffers
-    int packet_sent;                    // flag: do we have a packet outstanding?
-    int count;                          // number of flow_mod's received
+    enum test_mode mode;                // are we going for latency or throughput?
+    int probe_state;                    // if mode=LATENCY, this is a flag: do we have a packet outstanding?
+                                        // if mode=THROUGHPUT, this is the number of outstanding probes
+    int count;                          // number of response's received
     int ready_to_send;                  // are we ready to start sending packet_in's?
 };
 
@@ -24,8 +31,9 @@ struct fakeswitch
  * @param sock      A non-blocking socket already connected to 
  *                          the controller (will be non-blocking on return)
  * @param bufsize   The initial in and out buffer size
+ * @param mode      Should we test throughput or latency?
  */
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug);
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode);
 
 
 /*** Set the desired flags for poll()
