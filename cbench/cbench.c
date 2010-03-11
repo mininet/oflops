@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <float.h>
 #include <getopt.h>
+#include <math.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -292,6 +294,12 @@ int main(int argc, char * argv[])
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
     assert(fakeswitches);
 
+    double *results;
+    double  min = DBL_MAX;
+    double  max = 0.0;
+    double  v;
+    results = malloc(tests_per_loop * sizeof(double));
+
     for( i = 0; i < n_fakeswitches; i++)
     {
         int sock;
@@ -313,12 +321,30 @@ int main(int argc, char * argv[])
             continue;
         if(!should_test_range && ((i+1) != n_fakeswitches)) // only if testing range or this is last
             continue;
-        for( j = 0; j < tests_per_loop; j ++)
-            sum += run_test(i+1, fakeswitches,mstestlen);
-        printf("RESULT: %d switches avg of %d tests == %lf resps/second\n", 
+        for( j = 0; j < tests_per_loop; j ++) {
+            v = 1000.0 * run_test(i+1, fakeswitches,mstestlen);
+            results[j] = v;
+            sum += v;
+            if (v > max)
+              max = v;
+            if (v < min)
+              min = v;
+        }
+
+        // compute std dev
+        double avg = sum / tests_per_loop;
+        sum = 0.0;
+        for (j = 0; j < tests_per_loop; ++j) {
+          sum += pow(results[j] - avg, 2);
+        }
+        sum = sum / (double)(tests_per_loop);
+        double std_dev = sqrt(sum);
+
+        printf("RESULT: %d switches %d tests "
+            "min/max/avg/stdev = %.2lf/%.2lf/%.2lf/%.2lf responses/s\n",
                 i+1,
                 tests_per_loop,
-                1000.0*sum/tests_per_loop);
+                min, max, avg, std_dev);
     }
 
     return 0;
