@@ -50,3 +50,5 @@ latex:
 	    -e 's:^PAPER_TYPE *= letter:PAPER_TYPE = $(PAPER):'\
 	    < doxygen.conf | $(DOXYGEN) -
 	(cd latex && make pdf)
+
+install:
