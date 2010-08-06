@@ -1,4 +1,4 @@
-            OFLOPS: OpenFLow Operations Per Second
+            OFLOPS: OpenFlow Operations Per Second
 
 A benchmarking suite for openflow switches.  If you are looking
 to benchmark controllers, check out ./cbench included with this package.
@@ -12,20 +12,20 @@ an existing suite of tests and users are encouraged to develop their
 own tests.
 
 -------------------       QUICK INSTALL            --------------------
-
-sh boot.sh          #   if no ./configure file
-./configure --with-openflow-src-dir=/path/to/openflow
-make
-make docs           # build API documentation in ./doc
-make install
-
-oflops assumes you have snmp-utils installed:
-TODO: make this optional!
-
 debian:
-    sudo apt-get install libsnmp-dev
+    % sudo apt-get install libsnmp-dev libpcap-dev
 fedora/centos:
-    sudo yum install net-snmp-devel
+    % sudo yum install net-snmp-devel libpcap-devel
+
+TODO: make snmp utilities optional!
+
+% sh boot.sh          #   if no ./configure file
+% ./configure --with-openflow-src-dir=/path/to/openflow
+% make
+% make docs           # build API documentation in ./doc
+% make install
+
+
 
 -------------------  QUICK RUN : local software switch --------------------
 
