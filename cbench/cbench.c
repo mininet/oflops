@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <error.h>
 
 #include <netinet/tcp.h>
 
@@ -37,6 +38,8 @@ struct myargs my_options[] = {
     {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
     {"switches",    's', "fake $n switches", MYARGS_INTEGER, {.integer = 16}},
     {"throughput",  't', "test throughput instead of latency", MYARGS_NONE, {.none = 0}},
+    {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 0}},
+    {"cooldown",  'C', "loops to be disregarded at test end (cooldown)", MYARGS_INTEGER, {.integer = 0}},
     {0, 0, 0, 0}
 };
 
@@ -232,6 +235,8 @@ int main(int argc, char * argv[])
     int     should_test_range=myargs_get_default_flag(my_options, "ranged-test");
     int     tests_per_loop = myargs_get_default_integer(my_options, "loops");
     int     debug = myargs_get_default_flag(my_options, "debug");
+    int     warmup = myargs_get_default_integer(my_options, "warmup");
+    int     cooldown = myargs_get_default_integer(my_options, "cooldown");
     int     mode = MODE_LATENCY;
     int     i,j;
 
@@ -275,10 +280,21 @@ int main(int argc, char * argv[])
             case 't': 
                 mode = MODE_THROUGHPUT;
                 break;
+            case 'w': 
+                warmup = atoi(optarg);
+                break;
+            case 'C': 
+                cooldown = atoi(optarg);
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
     }
+
+	if(warmup+cooldown >=  tests_per_loop) {
+		error(10, 0, "Error warmup(%d) + cooldown(%d) >= number of tests (%d)", warmup, cooldown, tests_per_loop);
+	}
+
     fprintf(stderr, "cbench: controller benchmarking tool\n"
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
@@ -324,6 +340,8 @@ int main(int argc, char * argv[])
         for( j = 0; j < tests_per_loop; j ++) {
             v = 1000.0 * run_test(i+1, fakeswitches,mstestlen);
             results[j] = v;
+			if(j<warmup || j >= tests_per_loop-cooldown) 
+				continue;
             sum += v;
             if (v > max)
               max = v;
@@ -331,19 +349,20 @@ int main(int argc, char * argv[])
               min = v;
         }
 
+		int counted_tests = (tests_per_loop - warmup - cooldown);
         // compute std dev
-        double avg = sum / tests_per_loop;
+        double avg = sum / counted_tests;
         sum = 0.0;
-        for (j = 0; j < tests_per_loop; ++j) {
+        for (j = warmup; j < tests_per_loop-cooldown; ++j) {
           sum += pow(results[j] - avg, 2);
         }
-        sum = sum / (double)(tests_per_loop);
+        sum = sum / (double)(counted_tests);
         double std_dev = sqrt(sum);
 
         printf("RESULT: %d switches %d tests "
             "min/max/avg/stdev = %.2lf/%.2lf/%.2lf/%.2lf responses/s\n",
                 i+1,
-                tests_per_loop,
+                counted_tests,
                 min, max, avg, std_dev);
     }
 
