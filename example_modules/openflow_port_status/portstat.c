@@ -104,9 +104,10 @@ void new_rate(oflops_context * ctx)	// worst side effect evar
 		gettimeofday(&now,NULL);
 		//End experiment
 		fprintf(stderr, "Experiment has %lld packets sent and %lld received -- %f dropped",
-				sentcounter, receivecounter , (sentcounter-receivecounter)/(float)sentcounter);
+			(long long int)sentcounter, (long long int)receivecounter , 
+			(long long int)(sentcounter-receivecounter)/(float)sentcounter);
 		fprintf(stderr, " (i.e., loss = %lld) with average delay of %f us.\n", 
-				(sentcounter-receivecounter),
+				(long long int)(sentcounter-receivecounter),
 				((float) ((double) totaldelay)/((double) receivecounter)));
 		oflops_end_test(ctx,1);
 		return;
@@ -179,7 +180,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te)
 		}
 		buf.header.xid = next_index;
 		if (PACKET_IN_DEBUG)
-			fprintf(stderr, "Sending message %lld\n", sentcounter);
+			fprintf(stderr, "Sending message %lld\n", (long long int)sentcounter);
 		if(probes[next_index].in_use)
 			fprintf(delayfile,"%d %d\n",next_index, -1);
 		bzero(&probes[next_index],sizeof(probe));
@@ -308,7 +309,7 @@ int handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops
 					probe_index,
 					timediff.tv_sec, timediff.tv_usec);
 			fprintf(stderr, "\twith %lld packets sent and %lld received.\n", 
-					sentcounter, receivecounter);
+					(long long int)sentcounter, (long long int)receivecounter);
 		}
 	}
 	return 0;
