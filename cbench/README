@@ -1,13 +1,19 @@
 cbench is a benchmarking tool for controllers
 
-Simple Algorithm (verging on naive):
-    pretend to be n=1,2,4,8,16 switches
+Algorithm:
+    pretend to be n switches (n=16 is default)
     create n openflow sessions to the controller
-    for each session
-        1) send up a packet in
-        2) wait for a matching flow mod to come back
-        3) repeat
-        4) count how many times #1-3 happen per sec
+    if latency mode (default):
+        for each session:
+            1) send up a packet in
+            2) wait for a matching flow mod to come back
+            3) repeat
+            4) count how many times #1-3 happen per sec
+    else in throughtput mode (i.e., with '-t'):
+        for each session:
+            while buffer not full:
+                queue packet_in's
+                count flow_mod's as they come back
 
 
 NOTE: packet_in messages are the only (?) switch-solicited openflow
