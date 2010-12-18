@@ -239,8 +239,11 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 echo.xid = ofph->xid;
                 msgbuf_push(fs->outbuf,(char *) &echo, sizeof(echo));
                 break;
+            case OFPT_STATS_REQUEST:
+                debug_msg(fs, "Silently ignoring stats_request msg\n");
+                break;
             default: 
-                if(fs->debug)
+    //            if(fs->debug)
                     fprintf(stderr, "Ignoring OpenFlow message type %d\n", ofph->type);
         };
         if(fs->probe_state < 0)
