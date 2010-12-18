@@ -21,6 +21,7 @@ struct fakeswitch
                                         // if mode=THROUGHPUT, this is the number of outstanding probes
     int count;                          // number of response's received
     int ready_to_send;                  // are we ready to start sending packet_in's?
+    int probe_size;                     // how big is the probe (for buffer tuning)
 };
 
 /*** Initialize an already allocated fakeswitch

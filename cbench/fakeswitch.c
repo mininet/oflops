@@ -37,6 +37,7 @@ static inline uint64_t ntohll(uint64_t n)
 void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode)
 {
     static int ID =1 ;
+    char buf[BUFLEN];
     struct ofp_header ofph;
     fs->sock = sock;
     fs->debug = debug;
@@ -45,6 +46,7 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, en
     fs->outbuf = msgbuf_new(bufsize);
     fs->probe_state = 0;
     fs->mode = mode;
+    fs->probe_size = make_packet_in(fs->id, 0, buf, BUFLEN);
     fs->count = 0;
     fs->ready_to_send = 0;
 
@@ -261,18 +263,27 @@ static void fakeswitch_handle_write(struct fakeswitch *fs)
     static int BUFFER_ID=256;
     char buf[BUFLEN];
     int count ;
-    if( fs->ready_to_send == 1)
-        while(   ((fs->mode == MODE_LATENCY)  && ( fs->probe_state == 0 )) ||     // just send one packet
-                ((fs->mode == MODE_THROUGHPUT) && (msgbuf_count_buffered(fs->outbuf) < 65536))  // keep buffer full
-             )
+    int send_count = 0 ;
+    int throughput_buffer = 65536;
+    int i;
+    if( fs->ready_to_send == 1) 
+    {
+        if ((fs->mode == MODE_LATENCY)  && ( fs->probe_state == 0 ))      
+            send_count = 1;                 // just send one packet
+        else if ((fs->mode == MODE_THROUGHPUT) && 
+                (msgbuf_count_buffered(fs->outbuf) < throughput_buffer))  // keep buffer full
+            send_count = (throughput_buffer - msgbuf_count_buffered(fs->outbuf)) / fs->probe_size;
+        for (i = 0; i < send_count; i++)
         {
             // queue up packet
             if(BUFFER_ID < 256)     // prevent wrapping
                 BUFFER_ID = 256;
             fs->probe_state++;
+            // TODO come back and remove this copy
             count = make_packet_in(fs->id, fs->probe_state, buf, BUFLEN);
             msgbuf_push(fs->outbuf, buf, count);
         }
+    }
     // send any data if it's queued
     if( msgbuf_count_buffered(fs->outbuf) > 0)
         msgbuf_write(fs->outbuf, fs->sock, 0);
