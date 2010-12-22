@@ -22,6 +22,8 @@ struct fakeswitch
     int count;                          // number of response's received
     int ready_to_send;                  // are we ready to start sending packet_in's?
     int probe_size;                     // how big is the probe (for buffer tuning)
+    int delay;                          // delay in ms after features_reply before test
+    struct timeval  delay_start;
 };
 
 /*** Initialize an already allocated fakeswitch
@@ -34,7 +36,7 @@ struct fakeswitch
  * @param bufsize   The initial in and out buffer size
  * @param mode      Should we test throughput or latency?
  */
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode);
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode);
 
 
 /*** Set the desired flags for poll()

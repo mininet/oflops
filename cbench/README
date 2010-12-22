@@ -29,29 +29,32 @@ Longer start: change test params
 ---------------------------------------------------------------------
 Sample output from simple controller in OpenFlow reference suite
 
-[capveg@grr cbench]$ ./cbench
-1   switches: fmods/sec:  23498   total = 23.498000 per ms
-1   switches: fmods/sec:  24024   total = 24.047498 per ms
-1   switches: fmods/sec:  23869   total = 23.893047 per ms
-1   switches: fmods/sec:  24665   total = 24.688893 per ms
-1   switches: fmods/sec:  24382   total = 24.406689 per ms
-2   switches: fmods/sec:  34682  33844   total = 68.526000 per ms
-2   switches: fmods/sec:  33661  33656   total = 67.385526 per ms
-2   switches: fmods/sec:  34976  34970   total = 70.013386 per ms
-2   switches: fmods/sec:  34625  34617   total = 69.312013 per ms
-2   switches: fmods/sec:  24893  30018   total = 54.980312 per ms
-4   switches: fmods/sec:  19794  19793  18663  18657   total = 76.907000 per ms
-4   switches: fmods/sec:  18934  18932  18932  18931   total = 75.805907 per ms
-4   switches: fmods/sec:  19092  19091  19090  19090   total = 76.438806 per ms
-4   switches: fmods/sec:  18982  18981  18981  18981   total = 76.001439 per ms
-4   switches: fmods/sec:  19096  19095  19094  19093   total = 76.454001 per ms
-8   switches: fmods/sec:  9895  9895  9894  9894  9410  9396  9396  9388   total = 77.168000 per ms
-8   switches: fmods/sec:  9687  9687  9686  9686  9686  9686  9686  9686   total = 77.567168 per ms
-8   switches: fmods/sec:  9616  9615  9614  9614  9614  9614  9614  9613   total = 76.991567 per ms
-8   switches: fmods/sec:  9617  9617  9617  9617  9616  9616  9615  9615   total = 77.006992 per ms
-8   switches: fmods/sec:  9668  9668  9667  9667  9667  9666  9665  9665   total = 77.410007 per ms
-16  switches: fmods/sec:  5028  5028  5028  5028  5028  5027  5027  5027  4740  4740  4733  4733  4727  4723  4722  4722   total = 78.061000 per ms
-16  switches: fmods/sec:  4809  4809  4809  4809  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808  4808   total = 77.010061 per ms
-16  switches: fmods/sec:  4841  4841  4841  4841  4841  4841  4841  4841  4841  4841  4840  4840  4840  4840  4840  4840   total = 77.527010 per ms
-16  switches: fmods/sec:  4819  4818  4818  4818  4818  4818  4818  4818  4818  4817  4817  4817  4816  4815  4815  4815   total = 77.152527 per ms
-16  switches: fmods/sec:  4809  4808  4808  4808  4808  4808  4807  4807  4807  4806  4805  4805  4805  4804  4804  4803   total = 76.979153 per ms
+[capveg@grr cbench]$ ./cbench -p 54321
+cbench: controller benchmarking tool
+    connecting to controller at localhost:54321
+    faking 16 switches :: 16 tests each; 1000 ms per test
+    starting test with 0 ms delay after features_reply
+    debugging info is off
+16  switches: fmods/sec:  4661  4656  4655  4651  4649  4647  4645  4643  4640  4636  4634  4631  4625  4621  4617  4608   total = 74.218852 per ms
+16  switches: fmods/sec:  4843  4843  4842  4842  4842  4842  4842  4842  4841  4841  4841  4841  4841  4841  4839  4838   total = 77.458909 per ms
+16  switches: fmods/sec:  4649  4647  4647  4646  4646  4646  4646  4646  4646  4643  4642  4642  4642  4641  4641  4640   total = 74.308588 per ms
+16  switches: fmods/sec:  4832  4832  4832  4832  4832  4831  4831  4831  4831  4831  4831  4831  4830  4829  4829  4828   total = 77.292227 per ms
+16  switches: fmods/sec:  4784  4784  4784  4784  4784  4784  4784  4784  4784  4784  4784  4783  4783  4783  4783  4782   total = 76.537923 per ms
+16  switches: fmods/sec:  4705  4703  4701  4698  4694  4690  4688  4685  4682  4681  4679  4677  4670  4668  4665  4661   total = 74.945651 per ms
+16  switches: fmods/sec:  4813  4810  4805  4803  4802  4799  4797  4794  4791  4790  4786  4782  4781  4774  4770  4763   total = 76.659157 per ms
+16  switches: fmods/sec:  4817  4813  4808  4805  4801  4797  4796  4796  4791  4790  4785  4779  4777  4771  4769  4765   total = 76.659463 per ms
+16  switches: fmods/sec:  4676  4674  4669  4667  4666  4662  4660  4657  4654  4651  4649  4644  4641  4638  4634  4624   total = 74.465777 per ms
+16  switches: fmods/sec:  4880  4878  4875  4872  4870  4867  4865  4863  4860  4857  4853  4851  4844  4844  4843  4841   total = 77.762378 per ms
+16  switches: fmods/sec:  4795  4795  4794  4793  4793  4793  4793  4793  4793  4793  4793  4792  4792  4791  4791  4790   total = 76.683003 per ms
+16  switches: fmods/sec:  4868  4868  4868  4867  4867  4867  4866  4866  4865  4865  4865  4864  4864  4864  4864  4863   total = 77.850144 per ms
+16  switches: fmods/sec:  4780  4781  4781  4781  4780  4779  4779  4779  4779  4779  4779  4778  4778  4778  4777  4776   total = 76.463082 per ms
+16  switches: fmods/sec:  4844  4844  4844  4844  4844  4844  4843  4842  4842  4842  4842  4842  4841  4841  4841  4840   total = 77.479845 per ms
+16  switches: fmods/sec:  4847  4847  4847  4847  4848  4848  4848  4848  4847  4847  4847  4847  4847  4846  4846  4846   total = 77.552845 per ms
+16  switches: fmods/sec:  4788  4788  4788  4787  4787  4787  4787  4786  4786  4786  4785  4784  4784  4784  4784  4784   total = 76.574311 per ms
+RESULT: 16 switches 16 tests min/max/avg/stdev = 74218.85/77850.14/76432.01/1214.77 responses/s
+
+NOTE that depending on the switch, you might need to use the -D option to delay the test some 
+amount after the OpenFlow handshake is complete so it finishes setting up it's internal state.
+For example, the FlowVisor needs this so it can connect to the slice controller.
+
+------------------------------------------------------------------------

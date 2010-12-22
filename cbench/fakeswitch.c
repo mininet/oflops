@@ -34,7 +34,7 @@ static inline uint64_t ntohll(uint64_t n)
     return htonl(1) == 1 ? n : ((uint64_t) ntohl(n) << 32) | ntohl(n >> 32);
 }
 
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode)
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode)
 {
     static int ID =1 ;
     char buf[BUFLEN];
@@ -49,6 +49,7 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, en
     fs->probe_size = make_packet_in(fs->id, 0, buf, BUFLEN);
     fs->count = 0;
     fs->ready_to_send = 0;
+    fs->delay = delay;
 
     ofph.version = OFP_VERSION;
     ofph.type = OFPT_HELLO;
@@ -214,7 +215,16 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 count = make_features_reply(fs->id, ofph->xid, buf, BUFLEN);
                 msgbuf_push(fs->outbuf, buf, count);
                 debug_msg(fs, "sent feature_rsp");
-                fs->ready_to_send = 1;
+                if( fs->delay == 0)
+                    fs->ready_to_send = 1;
+                else 
+                {
+                    fs->ready_to_send = 2;
+                    gettimeofday(&fs->delay_start, NULL);
+                    fs->delay_start.tv_sec += fs->delay / 1000;
+                    fs->delay_start.tv_usec += (fs->delay % 1000 ) * 1000;
+                    debug_msg(fs, " delaying test start %d ms", fs->delay);
+                }
                 break;
             case OFPT_SET_CONFIG:
                 // pull msgs out of buffer
@@ -282,6 +292,15 @@ static void fakeswitch_handle_write(struct fakeswitch *fs)
             // TODO come back and remove this copy
             count = make_packet_in(fs->id, fs->probe_state, buf, BUFLEN);
             msgbuf_push(fs->outbuf, buf, count);
+        }
+    } else if( fs->ready_to_send == 2) 
+    {
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        if (timercmp(&now, &fs->delay_start, > ))
+        {
+            fs->ready_to_send = 1;
+            debug_msg(fs, " delay is over: sending probes now");
         }
     }
     // send any data if it's queued

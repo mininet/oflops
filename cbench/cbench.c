@@ -40,11 +40,12 @@ struct myargs my_options[] = {
     {"throughput",  't', "test throughput instead of latency", MYARGS_NONE, {.none = 0}},
     {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 0}},
     {"cooldown",  'C', "loops to be disregarded at test end (cooldown)", MYARGS_INTEGER, {.integer = 0}},
+    {"delay",  'D', "delay starting testing after features_reply is received (in ms)", MYARGS_INTEGER, {.integer = 0}},
     {0, 0, 0, 0}
 };
 
 /*******************************************************************/
-double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen)
+double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen, int delay)
 {
     struct timeval now, then, diff;
     struct  pollfd  * pollfds;
@@ -53,6 +54,8 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
     double passed;
     int count;
 
+    int total_wait = mstestlen + delay;
+
     pollfds = malloc(n_fakeswitches * sizeof(struct pollfd));
     assert(pollfds);
     gettimeofday(&then,NULL);
@@ -60,7 +63,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
     {
         gettimeofday(&now, NULL);
         timersub(&now, &then, &diff);
-        if( (1000* diff.tv_sec  + (float)diff.tv_usec/1000)> mstestlen)
+        if( (1000* diff.tv_sec  + (float)diff.tv_usec/1000)> total_wait)
             break;
         for(i = 0; i< n_fakeswitches; i++)
             fakeswitch_set_pollfd(&fakeswitches[i], &pollfds[i]);
@@ -78,6 +81,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
         sum += count;
     }
     passed = 1000 * diff.tv_sec + (double)diff.tv_usec/1000;   
+    passed -= delay;        // don't count the time we intentionally delayed
     sum /= passed;  // is now per ms
     printf(" total = %lf per ms \n", sum);
     free(pollfds);
@@ -238,6 +242,7 @@ int main(int argc, char * argv[])
     int     warmup = myargs_get_default_integer(my_options, "warmup");
     int     cooldown = myargs_get_default_integer(my_options, "cooldown");
     int     mode = MODE_LATENCY;
+    int     delay = 0;
     int     i,j;
 
     const struct option * long_opts = myargs_to_long(my_options);
@@ -286,6 +291,9 @@ int main(int argc, char * argv[])
             case 'C': 
                 cooldown = atoi(optarg);
                 break;
+            case 'D':
+                delay = atoi(optarg);
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
@@ -298,6 +306,7 @@ int main(int argc, char * argv[])
     fprintf(stderr, "cbench: controller benchmarking tool\n"
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
+                "   starting test with %d ms delay after features_reply\n"
                 "   debugging info is %s\n",
                 controller_hostname,
                 controller_port,
@@ -305,6 +314,7 @@ int main(int argc, char * argv[])
                 n_fakeswitches,
                 tests_per_loop,
                 mstestlen,
+                delay,
                 debug == 1 ? "on" : "off");
     /* done parsing args */
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
@@ -329,7 +339,7 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr,"Initializing switch %d ... ", i+1);
         fflush(stderr);
-        fakeswitch_init(&fakeswitches[i],sock,65536, debug, mode);
+        fakeswitch_init(&fakeswitches[i],sock,65536, debug, delay, mode);
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);
@@ -338,7 +348,9 @@ int main(int argc, char * argv[])
         if(!should_test_range && ((i+1) != n_fakeswitches)) // only if testing range or this is last
             continue;
         for( j = 0; j < tests_per_loop; j ++) {
-            v = 1000.0 * run_test(i+1, fakeswitches,mstestlen);
+            if ( j > 0 )
+                delay = 0;      // only delay on the first run
+            v = 1000.0 * run_test(i+1, fakeswitches, mstestlen, delay);
             results[j] = v;
 			if(j<warmup || j >= tests_per_loop-cooldown) 
 				continue;
