@@ -38,7 +38,7 @@ struct myargs my_options[] = {
     {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
     {"switches",    's', "fake $n switches", MYARGS_INTEGER, {.integer = 16}},
     {"throughput",  't', "test throughput instead of latency", MYARGS_NONE, {.none = 0}},
-    {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 0}},
+    {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 1}},
     {"cooldown",  'C', "loops to be disregarded at test end (cooldown)", MYARGS_INTEGER, {.integer = 0}},
     {"delay",  'D', "delay starting testing after features_reply is received (in ms)", MYARGS_INTEGER, {.integer = 0}},
     {0, 0, 0, 0}
@@ -241,8 +241,8 @@ int main(int argc, char * argv[])
     int     debug = myargs_get_default_flag(my_options, "debug");
     int     warmup = myargs_get_default_integer(my_options, "warmup");
     int     cooldown = myargs_get_default_integer(my_options, "cooldown");
+    int     delay = myargs_get_default_integer(my_options, "delay");
     int     mode = MODE_LATENCY;
-    int     delay = 0;
     int     i,j;
 
     const struct option * long_opts = myargs_to_long(my_options);
@@ -307,6 +307,7 @@ int main(int argc, char * argv[])
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
                 "   starting test with %d ms delay after features_reply\n"
+                "   ignoring first %d \"warmup\" and last %d \"cooldown\" loops\n"
                 "   debugging info is %s\n",
                 controller_hostname,
                 controller_port,
@@ -315,6 +316,7 @@ int main(int argc, char * argv[])
                 tests_per_loop,
                 mstestlen,
                 delay,
+                warmup,cooldown,
                 debug == 1 ? "on" : "off");
     /* done parsing args */
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
