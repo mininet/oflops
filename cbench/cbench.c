@@ -33,6 +33,7 @@ struct myargs my_options[] = {
     {"debug",       'd', "enable debugging", MYARGS_FLAG, {.flag = 0}},
     {"help",        'h', "print this message", MYARGS_NONE, {.none = 0}},
     {"loops",       'l', "loops per test",   MYARGS_INTEGER, {.integer = 16}},
+    {"mac-addresses", 'M', "unique source MAC addresses per switch", MYARGS_INTEGER, {.integer = 100000}},
     {"ms-per-test", 'm', "test length in ms", MYARGS_INTEGER, {.integer = 1000}},
     {"port",        'p', "controller port",  MYARGS_INTEGER, {.integer = OFP_TCP_PORT}},
     {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
@@ -237,6 +238,7 @@ int main(int argc, char * argv[])
     char *  controller_hostname = myargs_get_default_string(my_options,"controller");
     int     controller_port      = myargs_get_default_integer(my_options, "port");
     int     n_fakeswitches= myargs_get_default_integer(my_options, "switches");
+    int     total_mac_addresses = myargs_get_default_integer(my_options, "mac-addresses");
     int     mstestlen = myargs_get_default_integer(my_options, "ms-per-test");
     int     should_test_range=myargs_get_default_flag(my_options, "ranged-test");
     int     tests_per_loop = myargs_get_default_integer(my_options, "loops");
@@ -271,6 +273,9 @@ int main(int argc, char * argv[])
                 break;
             case 'l': 
                 tests_per_loop = atoi(optarg);
+                break;
+            case 'M':
+                total_mac_addresses = atoi(optarg);
                 break;
             case 'm': 
                 mstestlen = atoi(optarg);
@@ -309,6 +314,7 @@ int main(int argc, char * argv[])
                 "   running in mode %s\n"
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
+                "   with %d unique source MACs per switch\n"
                 "   starting test with %d ms delay after features_reply\n"
                 "   ignoring first %d \"warmup\" and last %d \"cooldown\" loops\n"
                 "   debugging info is %s\n",
@@ -319,6 +325,7 @@ int main(int argc, char * argv[])
                 n_fakeswitches,
                 tests_per_loop,
                 mstestlen,
+                total_mac_addresses,
                 delay,
                 warmup,cooldown,
                 debug == 1 ? "on" : "off");
@@ -345,7 +352,7 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr,"Initializing switch %d ... ", i+1);
         fflush(stderr);
-        fakeswitch_init(&fakeswitches[i],sock,65536, debug, delay, mode);
+        fakeswitch_init(&fakeswitches[i],sock,65536, debug, delay, mode, total_mac_addresses);
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);

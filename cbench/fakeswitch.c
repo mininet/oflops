@@ -21,7 +21,7 @@
 static int debug_msg(struct fakeswitch * fs, char * msg, ...);
 static int make_features_reply(int switch_id, int xid, char * buf, int buflen);
 static int make_vendor_reply(int xid, char * buf, int buflen);
-static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen);
+static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen, int mac_address);
 static void fakeswitch_handle_write(struct fakeswitch *fs);
 
 static inline uint64_t htonll(uint64_t n)
@@ -34,7 +34,7 @@ static inline uint64_t ntohll(uint64_t n)
     return htonl(1) == 1 ? n : ((uint64_t) ntohl(n) << 32) | ntohl(n >> 32);
 }
 
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode)
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses)
 {
     static int ID =1 ;
     char buf[BUFLEN];
@@ -46,10 +46,12 @@ void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, in
     fs->outbuf = msgbuf_new(bufsize);
     fs->probe_state = 0;
     fs->mode = mode;
-    fs->probe_size = make_packet_in(fs->id, 0, buf, BUFLEN);
+    fs->probe_size = make_packet_in(fs->id, 0, buf, BUFLEN, fs->current_mac_address++);
     fs->count = 0;
     fs->ready_to_send = 0;
     fs->delay = delay;
+    fs->total_mac_addresses = total_mac_addresses;
+    fs->current_mac_address = 0;
 
     ofph.version = OFP_VERSION;
     ofph.type = OFPT_HELLO;
@@ -134,14 +136,13 @@ static int make_vendor_reply(int xid, char * buf, int buflen)
     return sizeof(struct ofp_error_msg);
 }
 /***********************************************************************/
-static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
+static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen, int mac_address)
 {
-    static unsigned int uniquemac=0;
     struct ofp_packet_in * pi;
     struct ether_header * eth;
     const char fake[] = {
                 0x97,0x0a,0x00,0x52,0x00,0x00,0x00,0x00,0x00,0x00,0x01,
-                0x01,0x00,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+                0x01,0x00,0x40,0x00,0x00,0x00,0x00,0x80,0x00,0x00,0x00,
                 0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x02,0x08,0x00,0x45,
                 0x00,0x00,0x32,0x00,0x00,0x00,0x00,0x40,0xff,0xf7,0x2c,
                 0xc0,0xa8,0x00,0x28,0xc0,0xa8,0x01,0x28,0x7a,0x18,0x58,
@@ -156,8 +157,7 @@ static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen)
     eth = (struct ether_header * ) pi->data;
     // copy into src mac addr; only 4 bytes, but should suffice to not confuse
     // the controller; don't overwrite first byte
-    uniquemac++;       // make sure the mac addr is (kinda) unique
-    memcpy(&eth->ether_shost[1], &uniquemac, sizeof(uniquemac));   
+    memcpy(&eth->ether_shost[1], &mac_address, sizeof(mac_address));
     // mark this as coming from us, mostly for debug
     eth->ether_dhost[5] = switch_id;
     eth->ether_shost[5] = switch_id;
@@ -286,7 +286,8 @@ static void fakeswitch_handle_write(struct fakeswitch *fs)
                 BUFFER_ID = 256;
             fs->probe_state++;
             // TODO come back and remove this copy
-            count = make_packet_in(fs->id, fs->probe_state, buf, BUFLEN);
+            count = make_packet_in(fs->id, 0, buf, BUFLEN, fs->current_mac_address);
+            fs->current_mac_address = ++fs->current_mac_address % fs->total_mac_addresses;
             msgbuf_push(fs->outbuf, buf, count);
         }
     } else if( fs->ready_to_send == 2) 
