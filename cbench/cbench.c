@@ -74,6 +74,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
             fakeswitch_handle_io(&fakeswitches[i], &pollfds[i]);
     }
     printf("%-3d switches: fmods/sec:  ", n_fakeswitches);
+    usleep(100000); // sleep for 100 ms, to let packets queue
     for( i = 0 ; i < n_fakeswitches; i++)
     {
         count = fakeswitch_get_count(&fakeswitches[i]);

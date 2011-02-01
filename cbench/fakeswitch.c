@@ -76,17 +76,15 @@ void fakeswitch_set_pollfd(struct fakeswitch *fs, struct pollfd *pfd)
 int fakeswitch_get_count(struct fakeswitch *fs)
 {
     int ret = fs->count;
+    int err;
     fs->count = 0;
     fs->probe_state = 0;        // reset packet state
-    usleep(100000); // sleep for 100 ms, to let packets queue
-    msgbuf_read(fs->inbuf,fs->sock);     // try to clear out anything in the queue
-    if(fs->mode != MODE_THROUGHPUT)
-    {
-        msgbuf_clear(fs->inbuf);
-        msgbuf_clear(fs->outbuf);
-    }
-    // start the next send event
-    fakeswitch_handle_write(fs);
+    // keep reading until there is nothing to clear out the queue
+    while( (err = msgbuf_read(fs->inbuf,fs->sock)) > 0);
+    // now flush the queue; we ignore these responses b/c we're out
+    // of the timing portion of the test
+    msgbuf_clear(fs->inbuf);
+    msgbuf_clear(fs->outbuf);
     return ret;
 }
 
@@ -265,7 +263,6 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 fs->probe_state =0;
         }
     }
-    fakeswitch_handle_write(fs);        // flush any queued messages now, for efficency
 }
 /***********************************************************************/
 static void fakeswitch_handle_write(struct fakeswitch *fs)
