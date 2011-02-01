@@ -167,7 +167,8 @@ int timeout_connect(int fd, const char * hostname, int port, int mstimeout) {
 }
 
 /********************************************************************************/
-int make_tcp_connection_from_port(const char * hostname, unsigned short port,unsigned short sport,int mstimeout)
+int make_tcp_connection_from_port(const char * hostname, unsigned short port, unsigned short sport,
+        int mstimeout, int nodelay)
 {
     struct sockaddr_in local;
     int s;
@@ -179,7 +180,7 @@ int make_tcp_connection_from_port(const char * hostname, unsigned short port,uns
         perror("make_tcp_connection: socket");
         exit(1);  // bad socket
     }
-    if(setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &zero, sizeof(zero)) < 0)
+    if(nodelay && (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &zero, sizeof(zero)) < 0))
     {
         perror("setsockopt");
         fprintf(stderr,"make_tcp_connection::Unable to disable Nagle's algorithm\n");
@@ -208,9 +209,9 @@ int make_tcp_connection_from_port(const char * hostname, unsigned short port,uns
 }
 
 /********************************************************************************/
-int make_tcp_connection(const char * hostname, unsigned short port,int mstimeout)
+int make_tcp_connection(const char * hostname, unsigned short port, int mstimeout, int nodelay)
 {
-    return make_tcp_connection_from_port(hostname,port,INADDR_ANY,mstimeout);
+    return make_tcp_connection_from_port(hostname,port, INADDR_ANY, mstimeout, nodelay);
 }
 
 /********************************************************************************/
@@ -305,11 +306,13 @@ int main(int argc, char * argv[])
 	}
 
     fprintf(stderr, "cbench: controller benchmarking tool\n"
+                "   running in mode %s\n"
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
                 "   starting test with %d ms delay after features_reply\n"
                 "   ignoring first %d \"warmup\" and last %d \"cooldown\" loops\n"
                 "   debugging info is %s\n",
+                mode == MODE_THROUGHPUT? "'throughput'": "'latency'",
                 controller_hostname,
                 controller_port,
                 should_test_range ? " from 1 to": "",
@@ -333,7 +336,7 @@ int main(int argc, char * argv[])
     {
         int sock;
         double sum = 0;
-        sock = make_tcp_connection(controller_hostname, controller_port,3000);
+        sock = make_tcp_connection(controller_hostname, controller_port,3000, mode!=MODE_THROUGHPUT );
         if(sock < 0 )
         {
             fprintf(stderr, "make_nonblock_tcp_connection :: returned %d", sock);
