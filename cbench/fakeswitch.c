@@ -82,7 +82,9 @@ int fakeswitch_get_count(struct fakeswitch *fs)
     fs->count = 0;
     fs->probe_state = 0;        // reset packet state
     // keep reading until there is nothing to clear out the queue
-    while( (err = msgbuf_read(fs->inbuf,fs->sock)) > 0);
+    while( (err = msgbuf_read(fs->inbuf,fs->sock)) > 0) {
+        msgbuf_clear(fs->inbuf);
+    }
     // now flush the queue; we ignore these responses b/c we're out
     // of the timing portion of the test
     msgbuf_clear(fs->inbuf);
