@@ -186,8 +186,7 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
         ofph = msgbuf_peek(fs->inbuf);
         if(count < ntohs(ofph->length))
             return;     // msg not all there yet
-        msgbuf_pull(fs->inbuf, buf, ntohs(ofph->length));
-        ofph = (struct ofp_header * ) buf;
+        msgbuf_pull(fs->inbuf, NULL, ntohs(ofph->length));
         switch(ofph->type)
         {
             struct ofp_flow_mod * fm;
