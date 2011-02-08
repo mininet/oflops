@@ -1,6 +1,8 @@
 #ifndef USAGE_H
 #define USAGE_H
 
+#include <libconfig.h>
+
 #include "oflops.h"
 
 #define SNMP_DELIMITER ":"

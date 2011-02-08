@@ -221,7 +221,7 @@ int destroy(struct oflops_context *ctx) {
       if(count[i][ch] == 0) continue;
       mean = t[i][ch]/count[i][ch];
       std = (t_sq[i][ch]/count[i][ch]) - mean*mean;
-      std=(std >= 0)?sqrt(std):LLONG_MAX;
+      std=(std >= 0)?sqrt(std):LONG_MAX;
       loss = (float)count[i][ch]/(float)(max_id[i][ch] - min_id[i][ch]);
       snprintf(msg, 1024, "statistics:port:%d.%d:%lld:%lld:%.4f:%d", 
 	       ctx->channels[ch + 1].of_port,i, mean, std, loss, count[i][ch]);
@@ -249,7 +249,7 @@ int destroy(struct oflops_context *ctx) {
   if(count[0][0] > 0) {
       mean = t[0][0]/count[0][0];
       std = (t_sq[0][0]/count[0][0]) - mean*mean;
-      std=(std >= 0)?sqrt(std):LLONG_MAX;
+      std=(std >= 0)?sqrt(std):LONG_MAX;
       snprintf(msg, 1024, "stats_stats:%lld:%lld:%d", mean, std, count[0][0]);
       oflops_log(now, GENERIC_MSG, msg);
   } else {

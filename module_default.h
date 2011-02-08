@@ -11,6 +11,7 @@
 // Set of default operations for modules
 
 int default_module_init(struct oflops_context *ctx, char *);
+int default_module_destroy(struct oflops_context *ctx);
 int default_module_get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
 int default_module_start(struct oflops_context * ctx);
 int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch);
@@ -30,5 +31,6 @@ int default_module_of_event_port_status(struct oflops_context *ctx, const struct
 int default_module_of_event_other(struct oflops_context *ctx, const struct ofp_header * ofph);
 int default_module_handle_timer_event(struct oflops_context * ctx, struct timer_event * te);
 int default_module_handle_snmp_event(struct oflops_context * ctx, struct snmp_event * se);
+int default_module_handle_traffic_generation(struct oflops_context * ctx);
 
 #endif

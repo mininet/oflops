@@ -50,29 +50,40 @@ typedef struct test_module
 	 */
 	int (*init)(struct oflops_context *ctx, char * config_str);
 
-	/** \brief Ask module what pcap_filter it wants for this channel
-     *
-	 * DEFAULT: return zero --> don't send pcap events on this channel
-     *
-     * @param ofc      The oflops channel (data or control) to filter on filter
-	 * @param filter   A tcpdump-style pcap filter string, suitable for pcap_set_filter()
-     *          This string is already allocated.
-     * @param buflen   The max length of the filter string
-     * @return The length of the filter string: zero implies "do not listen on this channel"
-	 */
-	int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
 
-	/** \brief Tell the module it's time to start its test
-	 * 	pass raw sockets for send and recv channels
-	 * 	if the module wants direct access to them
-	 *
-	 * DEFAULT: NOOP
-     *
-	 * @param ctx opaque context
-	 *
-	 * @return 0 if success or -1 on error
-     */
-	int (*start)(struct oflops_context * ctx);
+  /** \brief Code to be run after the completion of the 
+   *   execution of a module
+   *
+   * DEFAULT: NONE! must be defined
+   *
+   * @param ctx opaque context
+   * @return 0 if success, -1 if fatal error
+   */
+  int (*destroy)(struct oflops_context *ctx);
+  
+  /** \brief Ask module what pcap_filter it wants for this channel
+   *
+   * DEFAULT: return zero --> don't send pcap events on this channel
+   *
+   * @param ofc      The oflops channel (data or control) to filter on filter
+   * @param filter   A tcpdump-style pcap filter string, suitable for pcap_set_filter()
+   *          This string is already allocated.
+   * @param buflen   The max length of the filter string
+   * @return The length of the filter string: zero implies "do not listen on this channel"
+   */
+  int (*get_pcap_filter)(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen);
+  
+  /** \brief Tell the module it's time to start its test
+   * 	pass raw sockets for send and recv channels
+   * 	if the module wants direct access to them
+   *
+   * DEFAULT: NOOP
+   *
+   * @param ctx opaque context
+   *
+   * @return 0 if success or -1 on error
+   */
+  int (*start)(struct oflops_context * ctx);
 
 	/** \brief Tell the test module that pcap found a packet on 
 	 * 	a certain channel
@@ -131,6 +142,15 @@ typedef struct test_module
 	 * @return 0 if success and -1 if error
 	 */
 	int (*handle_snmp_event)(struct oflops_context * ctx, struct snmp_event * se);
+
+	/** \brief run the packet generator module
+	 * 
+	 * DEFAULT: No packet generation
+	 *
+	 * @param ctx opqaue context
+	 * @return 0 if success and -1 if error
+	 */
+	int (*handle_traffic_generation)(struct oflops_context * ctx);
 	
 } test_module;
 

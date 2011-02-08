@@ -36,15 +36,24 @@ int setup_control_channel(oflops_context *ctx)
 
 
 	fprintf(stderr, "Creating server socket...\n");
-	ctx->listen_fd = socket( AF_INET, SOCK_STREAM, 0);
+	ctx->listen_fd = socket( AF_INET, SOCK_STREAM, 0); //create genericl socket
 	if(ctx->listen_fd == -1)
 		perror_and_exit("Dying on socket",1);
 
 	fprintf(stderr, "Setting SO_REUSE\n");
 	one =1;
+
+	/* in case this socket is in use and in active state then reuse it.
+	   (In case the progrem was terminated but didn;t shutdown properly
+	   it listening port )
+	 */
 	if(setsockopt(ctx->listen_fd,SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)))
 		perror_and_exit("Dying on setsockopt(SO_REUSEADDR)\n",1);
 	assert(ctx->channels[OFLOPS_CONTROL].dev);
+
+	/*
+	 * Get the name of the interface on which the socket was opened.  
+	 */
 	strncpy(ifr.ifr_name,ctx->channels[OFLOPS_CONTROL].dev,IFNAMSIZ);
 	if( ioctl( ctx->listen_fd, SIOCGIFADDR, &ifr)  == -1 )
 		perror_and_exit("ioctl() SIOCGIFADDR to dev",1);
@@ -74,9 +83,23 @@ int setup_control_channel(oflops_context *ctx)
 	if(fcntl(ctx->control_fd, F_SETFL, flags))
 		perror_and_exit("Dying on fcntl(control, O_NONBLOCK)",1);
     fprintf( stderr, "Turning off @&^$!@# Nagle algorithm on control channel\n");
+    /*
+     * TCP_NODELAY and TCP_CORK basically control packet "Nagling," 
+     * or automatic concatenation of small packets into bigger frames performed 
+     * by a Nagle algorithm.
+     */
     if(setsockopt(ctx->control_fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one)))
         perror_and_exit("Dying on setsockopt(tcp_nodelay",1);
-	return 0;
+
+    //setup pcap capturing on the control channel in order to get 
+    //higher granularity timestamps. 
+    
+    
+	
+    return 0;
+
+	
+
 }
 
 

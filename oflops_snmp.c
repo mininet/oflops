@@ -19,6 +19,8 @@ void setup_snmp_channel(struct oflops_context* ctx)
   fprintf(stderr, "Setting up SNMP\n");
 
   init_snmp("oflops");
+  init_mib();
+  add_mibdir("/var/lib/mibs/ietf/");
   snmp_sess_init(&ctx->snmp_channel_info->session);
   ctx->snmp_channel_info->session.version = SNMP_VERSION_2c;
   ctx->snmp_channel_info->session.peername = \

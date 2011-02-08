@@ -239,7 +239,7 @@ int destroy(struct oflops_context *ctx) {
     if(count[ch] == 0) continue;
     mean = t[ch]/count[ch];
     std = (t_sq[ch]/count[ch]) - mean*mean;
-    std = (std >= 0)?sqrt(std):LLONG_MAX;
+    std = (std >= 0)?sqrt(std):LONG_MAX;
     //if(std >= 0) std = sqrt(std); else std = LLONG_MAX;
     loss = (float)count[ch]/(float)(max_id[ch] - min_id[ch]);
     snprintf(msg, 1024, "statistics:port:%d:%lld:%lld:%.4f:%d", 
