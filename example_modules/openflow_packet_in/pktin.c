@@ -180,7 +180,7 @@ destroy(oflops_context *ctx) {
     mean = t/count;
     std = (t_sq/count) - mean*mean;
     printf("std:%f\n", std);
-    std=(std >= 0)?(long)sqrt((double)std):LLONG_MAX;
+    std=(std >= 0)?(long)sqrt((double)std):LONG_MAX;
     loss = (float)count/(float)(max_id - min_id);
     snprintf(msg, 1024, "statistics:port:%lld:%lld:%.4f:%d", mean, std, loss, count);
     oflops_log(now, GENERIC_MSG, msg);

@@ -110,9 +110,15 @@ AC_CONFIG_FILES([Makefile \
 		cbench/Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
-		example_modules/openflow_packet_in/Makefile \
-		example_modules/openflow_port_status/Makefile \
-		example_modules/snmp_cpu/Makefile
+                example_modules/openflow_action_install/Makefile \
+                example_modules/openflow_action_measurement/Makefile \
+                example_modules/openflow_path_delay/Makefile \
+                example_modules/openflow_flow_dump_test/Makefile \
+                example_modules/openflow_packet_in/Makefile \
+                example_modules/openflow_port_status/Makefile \
+                example_modules/snmp_cpu/Makefile
+
+
 		])
 
 AC_OUTPUT

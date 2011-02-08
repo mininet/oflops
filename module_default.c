@@ -10,6 +10,12 @@ int default_module_init(struct oflops_context *ctx, char * init)
 	return 0;
 }
 
+
+int default_module_destroy(struct oflops_context *ctx)
+{
+	return 0;
+}
+
 int default_module_get_pcap_filter(struct oflops_context *ctx, oflops_channel_name ofc, char * filter, int buflen)
 {
 	if(ofc == OFLOPS_CONTROL)       // only pcap dump the control channel
@@ -88,6 +94,10 @@ int default_module_handle_timer_event(struct oflops_context * ctx, struct timer_
 	return 0;
 }
 int default_module_handle_snmp_event(struct oflops_context * ctx, struct snmp_event * se)
+{
+	return 0;
+}
+int default_module_handle_traffic_generation(struct oflops_context * ctx)
 {
 	return 0;
 }

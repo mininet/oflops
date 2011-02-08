@@ -2,10 +2,10 @@ AUTOMAKE_OPTIONS=-Wall foreign
 
 OFSRC=@openflowsrc@
 
-CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow 
-LDFLAGS+=-L$(OFSRC)/lib 
+CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow `pkg-config --cflags libconfig`
+LDFLAGS+=-L$(OFSRC)/lib `pkg-config --libs libconfig` 
 
-LDADD=-ldl -lpcap -lnetsnmp -loflops_test 
+LDADD=-ldl -lpcap -lnetsnmp -loflops_test -lpthread
 #LDADD+=-lefence
 
 EXTRA_DIST=./doc
@@ -30,6 +30,9 @@ oflops_SOURCES= \
 	oflops.c oflops.h \
 	oflops_pcap.h oflops_pcap.c \
 	timer_event.h timer_event.c \
+	msg.c msg.h \
+	log.c log.h \
+	traffic_generator.c traffic_generator.h \
 	usage.h usage.c 
 oflops_LDFLAGS=-static -Wl,-E
 

@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <pthread.h>
 
 // modified pqueue.h ; lots of references to 'pq' still exist
 // Uncomment for heap debugging
@@ -18,6 +19,7 @@
 
 #include "wc_event.h"
 #include "utils.h"
+#include "context.h"
 
 
 /***************************** local types
@@ -318,8 +320,9 @@ int wc_get_next_event_delta(struct wc_queue * pq, struct timeval *delta)
 		return -1;
 	data=&pq->array[1];		// DUMBASS: we skip array[0] b/c it makes the math easier
 	gettimeofday(&now,NULL);
-	if(timercmp(&now,&data->key,>))
-		return 1;		// event already should have happened; sched for NOW
+	if(timercmp(&now,&data->key,>)) {
+	  return 1;		// event already should have happened; sched for NOW
+	}
 	// schedule event for some amount of time in future
 	timersub(&data->key,&now,delta);
 	return 0;			// there exists an event in the future
@@ -380,6 +383,26 @@ void wc_disable_timers(struct wc_queue *pq)
 	pq->timersEnabled=0;
 }
 
+/*************************************************
+ *  The main event loop of the event subsystem. 
+ */
+void *event_loop(void *param) {
+  int next_event;
+  struct run_module_param* state = (struct run_module_param *)param;
+  
+  //timer_init(state->ctx);
+  printf("event loop\n");
+
+  while(state->ctx->should_end == 0) {
+    next_event = timer_get_next_event(state->ctx);
+    if(next_event <= 0 ) {
+      pthread_yield();
+      timer_run_next_event(state->ctx);
+      //next_event = timer_get_next_event(ctx);
+    }
+  };
+  return NULL;
+}
 
 /******************************************************
  * void wc_enable_timers(struct timeval *timers,struct timeval *now);
