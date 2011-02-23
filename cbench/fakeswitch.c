@@ -201,7 +201,8 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 break;
             case OFPT_FLOW_MOD:
                 fm = (struct ofp_flow_mod *) ofph;
-                if(fm->command== htons(OFPFC_ADD) )
+                if(fm->command== htons(OFPFC_ADD) || 
+                        fm->command == htons(OFPFC_MODIFY_STRICT))
                 {
                     fs->count++;        // got response to what we went
                     fs->probe_state--;
