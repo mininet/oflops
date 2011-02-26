@@ -30,6 +30,7 @@ typedef struct channel_info {
 } channel_info;
 
 int channel_info_init(struct channel_info * channel, char * dev);
-void setup_channel(struct oflops_context *ctx, struct test_module *mod, enum oflops_channel_name ch);
+void setup_channel(struct oflops_context *ctx, 
+		   struct test_module *mod, enum oflops_channel_name ch);
 
 #endif

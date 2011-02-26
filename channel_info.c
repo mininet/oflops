@@ -110,6 +110,9 @@ void setup_channel(oflops_context *ctx, test_module *mod, oflops_channel_name ch
 	  ch_info->pcap_handle = pcap_open_live(ch_info->dev,65000,1,0,errbuf);
 	  if(ctx->dump_controller) { 
 	    ch_info->dump = pcap_dump_open(ch_info->pcap_handle, "controller.pcap");
+	    if(ch_info->dump == NULL ) {
+	      perror_and_exit(pcap_geterr(ch_info->pcap_handle), 1);
+	    }
 	    printf("XXXXXXXXXXXXXXXX Dumping controller channel to to file\n");
 	  } else {
 	    ch_info->dump = NULL;
