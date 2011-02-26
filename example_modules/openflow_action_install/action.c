@@ -335,7 +335,7 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te) {
       ip_addr.s_addr += inc;
       fl_probe->nw_dst =  htonl(ip_addr.s_addr);
       len = make_ofp_flow_add(&b, fl_probe, ctx->channels[OFLOPS_DATA2].of_port, 1, 1200);
-      res = oflops_send_of_mesgs(ctx, b, len);
+      oflops_send_of_mesgs(ctx, b, len);
       free(b);
     }
     fl_probe->nw_dst =  inet_addr("10.1.1.2");
