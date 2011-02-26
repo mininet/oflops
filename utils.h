@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-
+//#undef __USE_MISC
 #include <sys/types.h>
 
 
@@ -31,7 +31,7 @@ void perror_and_exit(char * str, int exit_code);
 
 void add_time(struct timeval *now, time_t secs,  suseconds_t usecs);
 void set_timeval(struct timeval *target, struct timeval *val);
-inline int time_diff(struct timeval *now, struct timeval *then);
+inline uint32_t time_diff(struct timeval *now, struct timeval *then);
 
 void* xmalloc(size_t len);
 
@@ -42,5 +42,7 @@ void fail(const char *msg);
  */
 uint64_t ntohll(uint64_t val);
 uint16_t ip_sum_calc(uint16_t len_ip_header, uint16_t buff[]);
+
+int get_mac_address(char *intf_name, char mac_addr[]);
 
 #endif
