@@ -101,6 +101,11 @@ AC_EGREP_HEADER(OFPT_FLOW_EXPIRED, [$OPENFLOWSRC/include/openflow/openflow.h],
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 
+#check for support for gsl
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_LIB([gslcblas],[cblas_dgemm])
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
+
 # Checks for library functions.
 AC_CHECK_FUNCS([strerror])
 
