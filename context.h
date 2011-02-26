@@ -52,8 +52,9 @@ typedef struct oflops_context
   /**
    * The switch cpu mib
    */
-  oid cpuOID[MAX_OID_LEN];
-  size_t cpuOID_len;
+  oid **cpuOID; //[MAX_OID_LEN];
+  size_t *cpuOID_len;
+  int cpuOID_count;
 
 } oflops_context;
 

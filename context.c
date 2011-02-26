@@ -44,7 +44,8 @@ oflops_context * oflops_default_context(void)
 	ctx->trafficGen = PKTGEN;
 
 	ctx->dump_controller = 0;
-	ctx->cpuOID_len = MAX_OID_LEN;
+	//ctx->cpuOID_len = MAX_OID_LEN;
+	ctx->cpuOID_count = 0;
 
 	return ctx;
 }
