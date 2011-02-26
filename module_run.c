@@ -316,8 +316,13 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
   // read the next packet from the appropriate pcap socket
   assert(ctx->channels[ch].pcap_handle);
   count = pcap_dispatch(ctx->channels[ch].pcap_handle, 1, oflops_pcap_handler, (u_char *) & wrap);
-  if((ch == OFLOPS_CONTROL) && (ctx->dump_controller)) 
+
+  //dump packet if required
+  if((ch == OFLOPS_CONTROL) && (ctx->channels[ch].pcap_handle) 
+     && (ctx->dump_controller)) {
     pcap_dump((u_char *)ctx->channels[ch].dump, &wrap.pe->pcaphdr, wrap.pe->data);
+  }
+
   if (count == 0)
     return;
   if (count < 0)

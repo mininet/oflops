@@ -33,8 +33,8 @@ int start_pktgen_traffic_generator(oflops_context *ctx);
   
 int init_traf_gen(struct oflops_context *ctx) {
   setuid(0);
-  if(system("modprobe pktgen") != 0)
-    perror_and_exit("modprobe pktgen failed", 1);
+  if(system("/sbin/modprobe pktgen") != 0)
+    perror_and_exit("/sbin/modprobe pktgen failed", 1);
   return 1;
 }
 
