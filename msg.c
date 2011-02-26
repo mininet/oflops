@@ -52,6 +52,15 @@ make_ofp_hello(void **buferp) {
 }
 
 int
+make_ofp_echo_req(void **buferp) {
+  struct ofp_header *p;
+  *buferp = xmalloc(sizeof(struct ofp_header));
+  p = *(struct ofp_header **)buferp;
+  ofp_init(p, OFPT_ECHO_REQUEST, sizeof(struct ofp_header));
+  return sizeof(struct ofp_header);
+}
+
+int
 make_ofp_feat_req(void **buferp) {
   struct ofp_hello *p;
   *buferp = xmalloc(sizeof(struct ofp_hello));
@@ -367,10 +376,34 @@ make_ofp_flow_add(void **buferp, struct flow *fl, uint32_t out_port,
   ofm->hard_timeout = htons(OFP_FLOW_PERMANENT);
   ofm->buffer_id = htonl(-1); //buffer_id);
   ofm->command = htons(OFPFC_ADD);
+  ofm->flags = htons(OFPFF_SEND_FLOW_REM | OFPFF_CHECK_OVERLAP);
   p->type = htons(OFPAT_OUTPUT);
   p->len = htons(8);
   p->port = htons(out_port);
-  p->max_len = htons(0);
+  p->max_len = htons(2000);
+  return len;
+}
+
+int
+make_ofp_flow_modify_output_port(void **buferp, struct flow *fl, uint32_t out_port,
+		  uint32_t buffer_id, uint16_t idle_timeout) {
+  //size of the packet we are sending .
+  size_t len = sizeof(struct ofp_flow_mod) + sizeof(struct ofp_action_output);
+  struct ofp_action_output *p = NULL;
+  *buferp = xmalloc(len);
+  if(make_flow_mod(*buferp, OFPFC_MODIFY, len, fl) < 0 ) 
+    fail("Error: falied to create flow modification packet.");
+  struct ofp_flow_mod *ofm = *buferp;
+  p = (struct ofp_action_output *)ofm->actions;
+  ofm->idle_timeout = htons(idle_timeout);
+  ofm->hard_timeout = htons(OFP_FLOW_PERMANENT);
+  ofm->buffer_id = htonl(-1); //buffer_id);
+  ofm->command = htons(OFPFC_ADD);
+  ofm->flags = htons(OFPFF_SEND_FLOW_REM);
+  p->type = htons(OFPAT_OUTPUT);
+  p->len = htons(8);
+  p->port = htons(out_port);
+  p->max_len = htons(2000);
   return len;
 }
 
@@ -380,7 +413,7 @@ make_ofp_flow_modify(void **buferp, struct flow *fl, char *actions,  uint16_t ac
   //size of the packet we are sending .
   size_t len = sizeof(struct ofp_flow_mod) + action_len;
   *buferp = xmalloc(len);
-  if(make_flow_mod(*buferp, OFPFC_ADD, len, fl) < 0 ) 
+  if(make_flow_mod(*buferp, OFPFC_MODIFY, len, fl) < 0 ) 
     fail("Error: falied to create flow modification packet.");
   struct ofp_flow_mod *ofm = *buferp;
   memcpy(ofm->actions, actions, action_len);
