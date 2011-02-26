@@ -329,8 +329,8 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te) {
     memcpy(fl_probe->dl_src, local_mac, 6); 
     memcpy(fl_probe->dl_dst, "\x00\x15\x17\x7b\x92\x0a", 6);
     fl_probe->in_port = htons(ctx->channels[OFLOPS_DATA1].of_port);
+    ip_addr.s_addr = inet_addr(network);
     for(i=0; i< flows; i++) {
-      ip_addr.s_addr = inet_addr(network);
       ip_addr.s_addr =  ntohl(ip_addr.s_addr);
       ip_addr.s_addr += inc;
       fl_probe->nw_dst =  htonl(ip_addr.s_addr);

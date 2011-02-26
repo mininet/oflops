@@ -115,7 +115,7 @@ AC_CONFIG_FILES([Makefile \
 		cbench/Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
-                example_modules/openflow_action_install/Makefile \
+                example_modules/openflow_action_scalability/Makefile \
                 example_modules/openflow_action_measurement/Makefile \
                 example_modules/openflow_path_delay/Makefile \
                 example_modules/openflow_flow_dump_test/Makefile \
