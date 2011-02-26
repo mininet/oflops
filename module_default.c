@@ -43,6 +43,7 @@ int default_module_start(struct oflops_context * ctx)
 
 int default_module_handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_channel_name ch)
 {
+  return 0;
 	if( ch != OFLOPS_CONTROL)
 		return 0;
 	if(!ctx->channels[OFLOPS_CONTROL].timestamps)
