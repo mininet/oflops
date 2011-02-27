@@ -6,6 +6,6 @@ LDFLAGS+=-L$(TOP) -lm -L$(OFSRC)/lib/
 
 LDADD=-ldl -lpcap -loflops_test -lopenflow
 
-lib_LTLIBRARIES=libopenflow_action_measurement.la
+lib_LTLIBRARIES=libopenflow_action_delay.la
 
-libopenflow_action_measurement_la_SOURCES= action.c # msg.h msg.c # vconn.c
+libopenflow_action_delay_la_SOURCES= action_delay.c # msg.h msg.c # vconn.c

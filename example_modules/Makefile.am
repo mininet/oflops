@@ -1,4 +1,4 @@
-SUBDIRS =  openflow_action_measurement oflops_debug \
+SUBDIRS =  openflow_action_delay oflops_debug \
         openflow_flow_dump_test openflow_packet_in \
         openflow_port_status snmp_cpu openflow_action_scalability \
 	snmp_cpu

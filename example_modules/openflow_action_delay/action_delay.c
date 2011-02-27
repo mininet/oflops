@@ -12,6 +12,9 @@
 #include <math.h>
 #include <limits.h>
 
+//include gsl to implement statistical functionalities
+#include <gsl/gsl_statistics.h>
+
 #include "log.h"
 #include "traffic_generator.h"
 #include "utils.h"
@@ -92,6 +95,9 @@ char *network = "192.168.3.0";
 int send_mod = 0; //a flag that we send the modification rule to the switch
 int send_false_mod = 0; //a flag that we send the modification rule to the switch
 
+
+int count[] = {0,0,0}; // counting how many packets where received over a 
+                       // specific channel
 /**
  * Number of flows to send. 
  */
@@ -102,15 +108,21 @@ int flows = 100;
  */
 char *cli_param;
 char *logfile = LOG_FILE;
+int print = 0;
 
 int trans_id = 0;
+
+//the local mac address of the probe 
+char probe_mac[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+char data_mac[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 
 /**
  *  Storing the details for the of_ping
  */
 struct timeval ofp_ping_timestamp[100];
 struct timeval false_modification, true_modification;
-long long  delay[100], delay_false_modificaton,  delay_modificaton;
+double delay[100];
+uint32_t delay_false_modificaton,  delay_modificaton;
 
 struct entry {
   struct timeval snd,rcv;
@@ -153,6 +165,17 @@ start(struct oflops_context * ctx) {
   int saved_flags = fcntl(ctx->control_fd, F_GETFL);
   fcntl(ctx->control_fd, F_SETFL, saved_flags & ~O_NONBLOCK);
 
+  get_mac_address(ctx->channels[OFLOPS_DATA1].dev, data_mac);
+  printf("%s: %02x:%02x:%02x:%02x:%02x:%02x\n", ctx->channels[OFLOPS_DATA1].dev,
+	 (unsigned char)data_mac[0], (unsigned char)data_mac[1], 
+	 (unsigned char)data_mac[2], (unsigned char)data_mac[3], 
+	 (unsigned char)data_mac[4], (unsigned char)data_mac[5]);
+
+  get_mac_address(ctx->channels[OFLOPS_DATA2].dev, probe_mac);
+  printf("%s: %02x:%02x:%02x:%02x:%02x:%02x\n", ctx->channels[OFLOPS_DATA2].dev,
+	 (unsigned char)data_mac[0], (unsigned char)data_mac[1], (unsigned char)data_mac[2], 
+	 (unsigned char)data_mac[3], (unsigned char)data_mac[4], (unsigned char)data_mac[5]);
+
 
   make_ofp_hello(&b);
   //res = oflops_send_of_mesgs(ctx, b, sizeof(struct ofp_hello));
@@ -184,18 +207,8 @@ start(struct oflops_context * ctx) {
     fl->mask = OFPFW_IN_PORT | OFPFW_DL_VLAN | OFPFW_TP_DST;
   fl->in_port = htons(ctx->channels[OFLOPS_DATA2].of_port);
   fl->dl_type = htons(ETHERTYPE_IP);          
-  fl->dl_src[0] = 00; 
-  fl->dl_src[1] = 0x1e; 
-  fl->dl_src[2] = 0x68; 
-  fl->dl_src[3] = 0x9a; 
-  fl->dl_src[4] = 0xc5; 
-  fl->dl_src[5] = 0x75; 
-  fl->dl_dst[0] = 00; 
-  fl->dl_dst[1] = 0x15; 
-  fl->dl_dst[2] = 0x17; 
-  fl->dl_dst[3] = 0x7b; 
-  fl->dl_dst[4] = 0x92; 
-  fl->dl_dst[5] = 0x0a; 
+  memcpy(fl->dl_src, probe_mac, ETH_ALEN);
+  memcpy(fl->dl_dst, "\x00\x15\x17\x7b\x92\x0a", ETH_ALEN);
   fl->dl_vlan = 0xffff;
   fl->nw_proto = IPPROTO_UDP;
   fl->nw_src =  inet_addr("10.1.1.1");
@@ -214,12 +227,8 @@ start(struct oflops_context * ctx) {
   fl->in_port = htons(ctx->channels[OFLOPS_DATA1].of_port);
   fl->dl_vlan = 0xffff;
   fl->dl_src[5] = 0x74;  
-  fl->dl_dst[0] = 00; 
-  fl->dl_dst[1] = 0x1e; 
-  fl->dl_dst[2] = 0x68; 
-  fl->dl_dst[3] = 0x9a; 
-  fl->dl_dst[4] = 0xc5; 
-  fl->dl_dst[5] = 0x75;
+  memcpy(fl->dl_src, data_mac, ETH_ALEN);
+  memcpy(fl->dl_dst, "\x00\x1e\x68\x9a\xc5\x75", ETH_ALEN);
   fl->mask = 0;
   for(i=0; i< flows; i++) {
     ip_addr.s_addr += 1;
@@ -272,65 +281,75 @@ destroy(struct oflops_context *ctx) {
   struct timeval now;
   FILE *out = fopen(logfile, "w");
   struct entry *np;
-  long long t[3], t_sq[3], mean, std;
-  int count[3], min_id[3], max_id[3];
-  int ch;
+  int  min_id[] = {INT_MAX, INT_MAX, INT_MAX};
+  int ix[] = {0,0,0};
+  int max_id[] = {INT_MIN, INT_MIN, INT_MIN}, ch, xid;
+  uint32_t mean, std, median;
   float loss;
-  int xid;
+  double **data;
 
   gettimeofday(&now, NULL);
   printf("destroying code\n");
-  snprintf(msg, 1024, "OFPT_ERROR_DELAY:%lld", delay_false_modificaton);
+  snprintf(msg, 1024, "OFPT_ERROR_DELAY:%lu", (long unsigned)delay_false_modificaton);
   oflops_log(now, GENERIC_MSG, msg);
-  snprintf(msg, 1024, "OFPT_INSERT_DELAY:%lld", delay_modificaton);
+  snprintf(msg, 1024, "OFPT_INSERT_DELAY:%lu", (long unsigned)delay_modificaton);
   oflops_log(now, GENERIC_MSG, msg);
 
-  for(ch = 0; ch < ctx->n_channels-1; ch++) {
-    count[ch] = 0;
-    min_id[ch] =  INT_MAX;
-    max_id[ch] =  INT_MIN;
-    t[ch] = 0;
-    t_sq[ch] = 0;    
-  }
+  //insert delay
+  data = xmalloc(3*sizeof(double *));
+  for(ch = 0; ch < 3; ch++) 
+    data[ch] = xmalloc(count[ch]*sizeof(double));
 
   for (np = head.tqh_first; np != NULL; np = np->entries.tqe_next) {
-    if(fprintf(out, "%lu;%lu.%06lu;%lu.%06lu;%d\n", 
-	       (long unsigned int)np->id,  
-	       (long unsigned int)np->snd.tv_sec, 
-	       (long unsigned int)np->snd.tv_usec,
-	       (long unsigned int)np->rcv.tv_sec, 
-	       (long unsigned int)np->rcv.tv_usec,  np->ch) < 0)  
-      perror_and_exit("fprintf fail", 1); 
     ch = np->ch - 1;
-    count[ch]++; 
     min_id[ch] = (np->id < min_id[ch])?np->id:min_id[ch];
     max_id[ch] = (np->id > max_id[ch])?np->id:max_id[ch];
-    t[ch] += time_diff(&np->snd, &np->rcv);
-    t_sq[ch] += time_diff(&np->snd, &np->rcv)*time_diff(&np->snd, &np->rcv);
+    data[ch][ix[ch]++] = time_diff(&np->snd, &np->rcv);
+    if(print)
+      if(fprintf(out, "%lu;%lu.%06lu;%lu.%06lu;%d\n", 
+		 (long unsigned int)np->id,  
+		 (long unsigned int)np->snd.tv_sec, 
+		 (long unsigned int)np->snd.tv_usec,
+		 (long unsigned int)np->rcv.tv_sec, 
+		 (long unsigned int)np->rcv.tv_usec,  np->ch) < 0)  
+	perror_and_exit("fprintf fail", 1); 
+
+    //release memory
     free(np);
   }
 
-  for(ch = 0; ch < ctx->n_channels-1; ch++) {
-    if(count[ch] == 0) continue;
-    mean = t[ch]/count[ch];
-    std = (t_sq[ch]/count[ch]) - mean*mean;
-    if(std >= 0) std = sqrt(std); else std = LONG_MAX;
-    loss = (float)count[ch]/(float)(max_id[ch] - min_id[ch]);
-    snprintf(msg, 1024, "statistics:port:%d:%lld:%lld:%.4f:%d", 
-	     ctx->channels[ch + 1].of_port, mean, std, loss, count[ch]);
+  for(ch = 0; ch < 3; ch++) {
+    if(ix[ch] == 0) continue;
+    gsl_sort (data[ch], 1, ix[ch]);
+    mean = (uint32_t)gsl_stats_mean(data[ch], 1, ix[ch]);
+    std = (uint32_t)sqrt(gsl_stats_variance(data[ch], 1, ix[ch]));
+    median = (uint32_t)gsl_stats_median_from_sorted_data (data[ch], 1, ix[ch]);
+    loss = (float)ix[ch]/(float)(max_id[ch] - min_id[ch]);
+
+    //print summarization data
+    snprintf(msg, 1024, "statistics:port:%d:%u:%u:%u:%.4f:%d", 
+	     ctx->channels[ch + 1].of_port, mean, median, std, loss, count[ch]);
+    printf("statistics:port:%d:%u:%u:%u:%.4f:%d\n", 
+	   ctx->channels[ch + 1].of_port, mean, median, std, loss, count[ch]);
     oflops_log(now, GENERIC_MSG, msg);
   }
 
-  t[0] = 0;
-  t_sq[0] = 0;
-  for (xid = 1 ; xid < trans_id; xid++) {
-    t[0] +=delay[xid];
-    t_sq[0] += delay[xid]*delay[xid];
+  //print echo delay per packet information 
+  if(print) {
+    for (xid = 1 ; xid < trans_id; xid++) {
+      snprintf(msg, 1024, "%u", (uint32_t)delay[xid]);
+      oflops_log(now, OFPT_ECHO_REPLY_MSG, msg);
+    }
   }
-  std = (t_sq[0]/trans_id) - mean*mean;
-  std = (std >= 0)?sqrt(std):LONG_MAX;
-  snprintf(msg, 1024, "ofp_echo_statistics:%lld:%lld", 
-	   t[0]/trans_id, std);
+
+  //claculate echo statistcs
+  gsl_sort (delay, 1, (trans_id - 1));
+  mean = (uint32_t)gsl_stats_mean(delay, 1, (trans_id - 1));
+  std = (uint32_t)sqrt(gsl_stats_variance(delay, 1, (trans_id - 1)));
+  median = (uint32_t)gsl_stats_median_from_sorted_data (delay, 1, (trans_id - 1));
+
+  printf("statistics:echo:%u:%u:%u:%d\n", mean, median, std, (trans_id-1));
+  snprintf(msg, 1024, "statistics:echo:%u:%u:%u:%d", mean, median, std, (trans_id - 1));
   oflops_log(now, GENERIC_MSG, msg);
   return 0;
 }
@@ -341,7 +360,7 @@ destroy(struct oflops_context *ctx) {
  */
 int handle_timer_event(struct oflops_context * ctx, struct timer_event *te) {  
   char *str = te->arg; 
-  int len;
+  int len, i;
   void *b;
   struct timeval now;
   struct ofp_flow_mod *ofp;
@@ -392,9 +411,11 @@ int handle_timer_event(struct oflops_context * ctx, struct timer_event *te) {
     send_mod= 1;
     oflops_send_of_mesg(ctx, b);
     free(b);
+    printf("sending correct modification to measure delay\n");
   } else if(strcmp(str, SNMPGET) == 0) {
-    oflops_snmp_get(ctx, ctx->cpuOID, ctx->cpuOID_len);
-    int i;
+    for(i=0;i<ctx->cpuOID_count;i++) {
+      oflops_snmp_get(ctx, ctx->cpuOID[i], ctx->cpuOID_len[i]);
+    }
     for(i=0;i<ctx->n_channels;i++) {
       oflops_snmp_get(ctx, ctx->channels[i].inOID, ctx->channels[i].inOID_len);
       oflops_snmp_get(ctx, ctx->channels[i].outOID, ctx->channels[i].outOID_len);
@@ -462,8 +483,6 @@ handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_cha
       case OFPT_ECHO_REPLY:
 	if(ntohl(ofp->xid) < 100 && ntohl(ofp->xid) > 0) {
 	  delay[ntohl(ofp->xid)] = time_diff(&ofp_ping_timestamp[ntohl(ofp->xid)], &pe->pcaphdr.ts);
-	  snprintf(msg, 1024, "%d", time_diff(&ofp_ping_timestamp[ntohl(ofp->xid)], &pe->pcaphdr.ts));
-	  oflops_log(pe->pcaphdr.ts, OFPT_ECHO_REPLY_MSG, msg);
 	}
 	break;    
       case OFPT_ERROR:
@@ -483,7 +502,8 @@ handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_cha
     pktgen = extract_pktgen_pkt(pe->data, pe->pcaphdr.caplen, &fl);
     if((ch == OFLOPS_DATA3) && (!first_pkt)) {
       delay_modificaton = time_diff(&true_modification, &pe->pcaphdr.ts);
-      oflops_log(pe->pcaphdr.ts, GENERIC_MSG, "first packet on new port");
+      oflops_log(pe->pcaphdr.ts, GENERIC_MSG, "PACKET_NEW_PORT");
+      //printf("first packet on new port\n");
       first_pkt = 1;
     }
     if(htonl(pktgen->seq_num) % 100000 == 0)
@@ -495,6 +515,7 @@ handle_pcap_event(struct oflops_context *ctx, struct pcap_event * pe, oflops_cha
     memcpy(&n1->rcv, &pe->pcaphdr.ts, sizeof(struct timeval));
     n1->id = htonl(pktgen->seq_num);
     n1->ch = ch;
+    count[ch - 1]++;
     TAILQ_INSERT_TAIL(&head, n1, entries);
   }
   return 0;
@@ -528,39 +549,41 @@ int
 handle_snmp_event(struct oflops_context * ctx, struct snmp_event * se) {
   netsnmp_variable_list *vars;
   int len = 1024;
-  char msg[1024], log[1024];
+  char msg[1024], out_buf[1024];
   struct timeval now;
   int i;
   gettimeofday(&now, NULL);
 
   for(vars = se->pdu->variables; vars; vars = vars->next_variable)  {
     snprint_value(msg, len, vars->name, vars->name_length, vars);
-    if((vars->name_length == ctx->cpuOID_len) &&
-       (memcmp(vars->name, ctx->cpuOID,  ctx->cpuOID_len * sizeof(oid)) == 0) ) {
-      snprintf(log, len, "cpu : %s %%", msg);
-      oflops_log(now, SNMP_MSG, log);
-    } else {
-      for(i=0;i<ctx->n_channels;i++) {
-	if((vars->name_length == ctx->channels[i].inOID_len) &&
-	   (memcmp(vars->name, ctx->channels[i].inOID,  
-		   ctx->channels[i].inOID_len * sizeof(oid)) == 0) ) {
-	  snprintf(log, len, "port %d : rx %s pkts",  
-		   (int)ctx->channels[i].outOID[ctx->channels[i].outOID_len-1], msg);
-	  oflops_log(now, SNMP_MSG, log);
-	  break;
-	}
-	
-	if((vars->name_length == ctx->channels[i].outOID_len) &&
-	   (memcmp(vars->name, ctx->channels[i].outOID,  
-		   ctx->channels[i].outOID_len * sizeof(oid))==0) ) {
-	  snprintf(log, len, "port %d : tx %s pkts",  
-		   (int)ctx->channels[i].outOID[ctx->channels[i].outOID_len-1], msg);
-	  oflops_log(now, SNMP_MSG, log);
-	  break;
-	}
-      } //for
-    }// if cpu
-  }// variable iterator
+    for (i = 0; i < ctx->cpuOID_count; i++) {
+      if((vars->name_length == ctx->cpuOID_len[i]) &&
+	 (memcmp(vars->name, ctx->cpuOID[i],  ctx->cpuOID_len[i] * sizeof(oid)) == 0) ) {
+	snprintf(out_buf, len, "cpu : %s %%", msg);
+	oflops_log(now, SNMP_MSG, out_buf);
+      }
+    } 
+
+    for(i=0;i<ctx->n_channels;i++) {
+      if((vars->name_length == ctx->channels[i].inOID_len) &&
+	 (memcmp(vars->name, ctx->channels[i].inOID,  
+		 ctx->channels[i].inOID_len * sizeof(oid)) == 0) ) {
+	snprintf(out_buf, len, "port %d : rx %s pkts",  
+		 (int)ctx->channels[i].outOID[ctx->channels[i].outOID_len-1], msg);
+	oflops_log(now, SNMP_MSG, out_buf);
+	break;
+      }
+      
+      if((vars->name_length == ctx->channels[i].outOID_len) &&
+	 (memcmp(vars->name, ctx->channels[i].outOID,  
+		 ctx->channels[i].outOID_len * sizeof(oid))==0) ) {
+	snprintf(out_buf, len, "port %d : tx %s pkts",  
+		 (int)ctx->channels[i].outOID[ctx->channels[i].outOID_len-1], msg);
+	oflops_log(now, SNMP_MSG, out_buf);
+	break;
+      }
+    } //for
+  }// if cpu
   return 0;
 }
 
@@ -579,7 +602,8 @@ handle_traffic_generation (oflops_context *ctx) {
     ip.s_addr = htonl(ip.s_addr);
     str_ip = inet_ntoa(ip);
     strcpy(det.dst_ip_max, str_ip);
-    strcpy(det.mac_src,"00:1e:68:9a:c5:74");
+    //strcpy(det.mac_src,"00:1e:68:9a:c5:74");
+    strcpy(det.mac_src,"00:00:00:00:00:00");
     strcpy(det.mac_dst,"00:1e:68:9a:c5:75");
     det.vlan = 0xffff;
     det.vlan_p = 1;
@@ -594,7 +618,8 @@ handle_traffic_generation (oflops_context *ctx) {
   strcpy(det.src_ip,"10.1.1.1");
   strcpy(det.dst_ip_min,"10.1.1.2");
   strcpy(det.dst_ip_max,"10.1.1.2");
-  strcpy(det.mac_src,"00:1e:68:9a:c5:75");
+  //strcpy(det.mac_src,"00:1e:68:9a:c5:75");
+  strcpy(det.mac_src,"00:00:00:00:00:00");
   strcpy(det.mac_dst,"00:15:17:7b:92:0a");
   det.vlan = 0xffff;
   det.vlan_p = 0;
@@ -642,8 +667,6 @@ int init(struct oflops_context *ctx, char * config_str) {
   int len = strlen(config_str);
   char *value = NULL;
   char *action;
-
-  struct ofp_action_output *act_out;
 
   //init counters
   finished = 0;
@@ -730,6 +753,9 @@ int init(struct oflops_context *ctx, char * config_str) {
         flows = strtol(value, NULL, 0);
         if(flows <= 0)  
           perror_and_exit("Invalid flow number", 1);
+      }else if(strcmp(param, "print") == 0) { 
+	//parse int to check whether per packet statistics should be stored 
+        print = strtol(value, NULL, 0);
       } else 
         fprintf(stderr, "Invalid parameter:%s\n", param);
       param = pos;
@@ -751,14 +777,14 @@ int init(struct oflops_context *ctx, char * config_str) {
 
   //by default the new rule should be redirected to port 2 to make the measurement easier
   /* fprintf(stderr, "by default output packet to port 1\n"); */
-  /* command_len += sizeof(struct ofp_action_output); */
-  /* command = realloc(command, command_len); */
-  /* act_out = (struct ofp_action_output *) */
-  /*   (command + (command_len - sizeof(struct ofp_action_output))); */
-  /* act_out->type = htons(0); */
-  /* act_out->len = htons(8); */
-  /* act_out->max_len = htons(0); */
-  /* act_out->port = htons(ctx->channels[OFLOPS_DATA3].of_port); */
+/*   command_len += sizeof(struct ofp_action_output); */
+/*   command = realloc(command, command_len); */
+/*   act_out = (struct ofp_action_output *) */
+/*     (command + (command_len - sizeof(struct ofp_action_output))); */
+/*   act_out->type = htons(0); */
+/*   act_out->len = htons(8); */
+/*   act_out->max_len = htons(0); */
+/*   act_out->port = htons(ctx->channels[OFLOPS_DATA3].of_port); */
   return 0;
 }
 
