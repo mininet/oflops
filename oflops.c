@@ -78,8 +78,11 @@ int main(int argc, char * argv[])
       printf("%s\n", msg);
     }
 
-    oflops_log(now, PKTGEN_MSG, report_traffic_generator(ctx));
-    printf("%s\n", report_traffic_generator(ctx));
+    char *ret = report_traffic_generator(ctx);
+    if(ret) {
+      oflops_log(now, PKTGEN_MSG, report_traffic_generator(ctx));
+      printf("%s\n", ret);
+    }
   }
 
   oflops_log_close();

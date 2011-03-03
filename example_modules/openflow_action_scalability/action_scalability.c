@@ -254,7 +254,6 @@ int destroy(struct oflops_context *ctx) {
     min_id[ch] = (np->id < min_id[ch])?np->id:min_id[ch];
     max_id[ch] = (np->id > max_id[ch])?np->id:max_id[ch];
     data[ch][ix[ch]++] = time_diff(&np->snd, &np->rcv);
-    free(np);
     //print also packet details on otuput if required
     if(print)
       if(fprintf(out, "%lu;%lu.%06lu;%lu.%06lu;%d\n", 
@@ -264,7 +263,8 @@ int destroy(struct oflops_context *ctx) {
 		 (long unsigned int)np->rcv.tv_sec, 
 		 (long unsigned int)np->rcv.tv_usec,  np->ch) < 0)  
 	perror_and_exit("fprintf fail", 1); 
-    
+
+    free(np);
   }
   
   for(ch = 0; ch < 3; ch++) {
@@ -275,9 +275,9 @@ int destroy(struct oflops_context *ctx) {
       median = (uint32_t)gsl_stats_median_from_sorted_data (data[ch], 1, ix[ch]);
       loss = (float)ix[ch]/(float)(max_id[ch] - min_id[ch]);
       
-      snprintf(msg, 1024, "statistics:port:%d:%lu:%lu:%lu:%.4f:%d", 
+      snprintf(msg, 1024, "statistics:port:%d:%u:%u:%u:%.4f:%d", 
 	       ctx->channels[ch + 1].of_port, mean, median, std, loss, count[ch]);
-      printf("statistics:port:%d:%ld:%ld:%ld:%.4f:%d\n", 
+      printf("statistics:port:%d:%u:%u:%u:%.4f:%d\n", 
 	     ctx->channels[ch + 1].of_port, mean, median, std, loss, count[ch]);
       oflops_log(now, GENERIC_MSG, msg);
     }
@@ -296,8 +296,8 @@ int destroy(struct oflops_context *ctx) {
     mean = (uint32_t)gsl_stats_mean(data[0], 1, echo_data_count);
     std = (uint32_t)sqrt(gsl_stats_variance(data[0], 1, echo_data_count));
     median = (uint32_t)gsl_stats_median_from_sorted_data (data[0], 1, echo_data_count);
-    printf("statistics:echo:%ld:%ld:%ld:%d\n", mean, median, std, echo_data_count);
-    snprintf(msg, 1024, "statistics:echo:%ld:%ld:%ld:%d", mean, median, std, echo_data_count);
+    printf("statistics:echo:%u:%u:%u:%d\n", mean, median, std, echo_data_count);
+    snprintf(msg, 1024, "statistics:echo:%u:%u:%u:%d", mean, median, std, echo_data_count);
     oflops_log(now, GENERIC_MSG, msg);
   }
 

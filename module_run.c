@@ -64,6 +64,8 @@ int run_test_module(oflops_context *ctx, int ix_mod)
   test_module_loop(ctx,mod);
   mod->destroy(ctx);
 
+
+  printf("Tearing down snmp \n");
   //Teardown
   teardown_snmp_channel(ctx);
 

@@ -6,6 +6,6 @@ LDFLAGS+=-L$(TOP) -lm -L$(OFSRC)/lib/
 
 LDADD=-ldl -lpcap -loflops_test -lopenflow
 
-lib_LTLIBRARIES=libopenflow_flow_dump_test.la
+lib_LTLIBRARIES=libopenflow_flow_stats.la
 
-libopenflow_flow_dump_test_la_SOURCES= pktin.c # vconn.c
+libopenflow_flow_stats_la_SOURCES= flow_stats.c # vconn.c

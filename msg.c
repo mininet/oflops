@@ -490,7 +490,33 @@ make_ofp_flow_get_stat(void **buferp, int trans_id) {
   reqp->out_port = OFPP_NONE;
 
   return len;
+}
+
+int
+make_ofp_aggr_flow_stats(void **buferp, int trans_id) {
+  struct ofp_aggregate_stats_request *reqp = NULL;
+  struct ofp_stats_request *headp = NULL;
   
+  int len = sizeof(struct ofp_stats_request) + 
+    sizeof(struct ofp_aggregate_stats_request);
+
+  //allocate memory
+  *buferp = xmalloc(len);
+  memset(*buferp, 0, len);
+  headp =  (struct ofp_stats_request *)*buferp;
+
+  headp->header.version = OFP_VERSION;
+  headp->header.type = OFPT_STATS_REQUEST;
+  headp->header.length = htons(len);
+  headp->header.xid = htonl(trans_id);
+  headp->type = htons(OFPST_AGGREGATE);
+
+  reqp = (struct ofp_aggregate_stats_request *)(*(buferp)+sizeof(struct ofp_stats_request));
+  reqp->match.wildcards = htonl(OFPFW_ALL);
+  reqp->table_id = 0xFF;
+  reqp->out_port = OFPP_NONE;
+
+  return len;
 }
 
 int 
@@ -501,7 +527,7 @@ make_ofp_port_get_stat(void **buferp) {
   headp =  (struct ofp_stats_request *)*buferp;
   headp->header.version = OFP_VERSION;
   headp->header.type = OFPT_STATS_REQUEST;
-  headp->header.length = htons(sizeof(struct ofp_stats_request));
+  headp->header.length = htons(sizeof(struct ofp_stats_equest));
   headp->type = htons(OFPST_PORT);
   return sizeof(struct ofp_stats_request);
 #elif OFP_VERSION == 0x01  

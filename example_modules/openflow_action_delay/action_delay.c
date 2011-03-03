@@ -173,8 +173,9 @@ start(struct oflops_context * ctx) {
 
   get_mac_address(ctx->channels[OFLOPS_DATA2].dev, probe_mac);
   printf("%s: %02x:%02x:%02x:%02x:%02x:%02x\n", ctx->channels[OFLOPS_DATA2].dev,
-	 (unsigned char)data_mac[0], (unsigned char)data_mac[1], (unsigned char)data_mac[2], 
-	 (unsigned char)data_mac[3], (unsigned char)data_mac[4], (unsigned char)data_mac[5]);
+	 (unsigned char)probe_mac[0], (unsigned char)probe_mac[1], 
+	 (unsigned char)probe_mac[2], (unsigned char)probe_mac[3], 
+	 (unsigned char)probe_mac[4], (unsigned char)probe_mac[5]);
 
 
   make_ofp_hello(&b);
@@ -233,7 +234,7 @@ start(struct oflops_context * ctx) {
   for(i=0; i< flows; i++) {
     ip_addr.s_addr += 1;
     fl->nw_dst =  htonl(ip_addr.s_addr);
-    len = make_ofp_flow_add(&b, fl, ctx->channels[OFLOPS_DATA2].of_port, 1, 1200);
+    len = make_ofp_flow_add(&b, fl, ctx->channels[OFLOPS_DATA2].of_port, 2, 1200);
     res = write(ctx->control_fd, b, len);
     free(b);
   }
