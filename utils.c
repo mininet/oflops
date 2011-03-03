@@ -76,6 +76,16 @@ time_diff(struct timeval *now, struct timeval *then) {
   return (then->tv_sec - now->tv_sec)*1000000 + (then->tv_usec - now->tv_usec);
 }
 
+inline int
+time_cmp(struct timeval *now, struct timeval *then) {
+  if(then->tv_sec != now->tv_sec) {
+    return (then->tv_sec < now->tv_sec)?-1:1;
+  } else if (then->tv_usec != now->tv_usec) {
+    return (then->tv_usec < now->tv_usec)?-1:1;
+  } else 
+    return 0;
+}
+
 void*
 xmalloc(size_t len) {
   void *p = NULL;
