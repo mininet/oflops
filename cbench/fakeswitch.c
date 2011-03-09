@@ -78,17 +78,23 @@ void fakeswitch_set_pollfd(struct fakeswitch *fs, struct pollfd *pfd)
 int fakeswitch_get_count(struct fakeswitch *fs)
 {
     int ret = fs->count;
-    int err;
+    int count;
+    int msglen;
+    struct ofp_header * ofph;
     fs->count = 0;
     fs->probe_state = 0;        // reset packet state
     // keep reading until there is nothing to clear out the queue
-    while( (err = msgbuf_read(fs->inbuf,fs->sock)) > 0) {
-        msgbuf_clear(fs->inbuf);
+    while( (count = msgbuf_read(fs->inbuf,fs->sock)) > 0) {
+        while(count > 0) {
+            // need to read msg by msg to ensure framing isn't broken
+            ofph = msgbuf_peek(fs->inbuf);
+            msglen = ntohs(ofph->length);
+            if(count < msglen)
+                break;     // msg not all there yet; 
+            msgbuf_pull(fs->inbuf, NULL, ntohs(ofph->length));
+            count -= msglen;
+        }
     }
-    // now flush the queue; we ignore these responses b/c we're out
-    // of the timing portion of the test
-    msgbuf_clear(fs->inbuf);
-    msgbuf_clear(fs->outbuf);
     return ret;
 }
 
