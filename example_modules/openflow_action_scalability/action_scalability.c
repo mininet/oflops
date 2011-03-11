@@ -35,7 +35,7 @@
  * @return name of module
  */
 char * name() {
-	return "openflow_action_install";
+	return "openflow_add_flow";
 }
 
 /*
@@ -117,11 +117,9 @@ struct entry {
   TAILQ_ENTRY(entry) entries;         /* Tail queue. */
 }; 
 TAILQ_HEAD(tailhead, entry) head;
-			    
-			    
+   
 struct entry echo_data[100];
 int echo_data_count = 0;
-
 
 /**
  * Initialization

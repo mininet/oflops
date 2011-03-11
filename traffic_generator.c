@@ -313,7 +313,7 @@ start_pktgen_traffic_generator(oflops_context *ctx) {
       printf_and_check(intf_file, buf);      
       snprintf(buf, 5000, "dst_max %s", ctx->channels[ix].det->dst_ip_max); 
       printf_and_check(intf_file, buf);    
-      snprintf(buf, 5000, "flag IPDST_RND"); 
+      snprintf(buf, 5000, "flag %s | IPDST_RND", ctx->channels[ix].det->flags);//IPDST_RND");
       printf_and_check(intf_file, buf);
 
       snprintf(buf, 5000, "vlan_id %d", ctx->channels[ix].det->vlan); 

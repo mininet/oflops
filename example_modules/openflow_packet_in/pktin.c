@@ -324,6 +324,7 @@ handle_traffic_generation (oflops_context *ctx) {
   det.udp_dst_port = 8080;
   det.pkt_size = pkt_size;
   det.delay = probe_snd_interval*1000;
+  strcpy(det.flags, "IPDST_RND");
   add_traffic_generator(ctx, OFLOPS_DATA1, &det);  
   
   start_traffic_generator(ctx);

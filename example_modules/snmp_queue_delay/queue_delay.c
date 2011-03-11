@@ -232,6 +232,7 @@ handle_traffic_generation (oflops_context *ctx) {
   det.udp_src_port = 8080;
   det.udp_dst_port = 8080;
   det.pkt_size = pkt_size;
+  strcpy(det.flags, "");
   
   //calculating interpacket gap
   for (i = 0; i < datarate_count; i++) {

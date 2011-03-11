@@ -376,7 +376,7 @@ make_ofp_flow_add(void **buferp, struct flow *fl, uint32_t out_port,
   ofm->hard_timeout = htons(OFP_FLOW_PERMANENT);
   ofm->buffer_id = htonl(-1); //buffer_id);
   ofm->command = htons(OFPFC_ADD);
-  ofm->flags = htons(OFPFF_SEND_FLOW_REM | OFPFF_CHECK_OVERLAP);
+  ofm->flags = htons(OFPFF_SEND_FLOW_REM);
   p->type = htons(OFPAT_OUTPUT);
   p->len = htons(8);
   p->port = htons(out_port);

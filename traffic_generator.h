@@ -22,6 +22,7 @@ struct traf_gen_det {
   uint16_t vlan_cfi;
   uint32_t delay;
   uint64_t pkt_count;
+  char flags[1024];
 };
 
 struct pktgen_hdr {
