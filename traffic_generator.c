@@ -30,10 +30,11 @@ struct pkt_details **generator_state = NULL;
 
 int start_user_traffic_generator(oflops_context *ctx);
 int start_pktgen_traffic_generator(oflops_context *ctx);
+  
 int init_traf_gen(struct oflops_context *ctx) {
   setuid(0);
-  if(system("/sbin/modprobe pktgen") != 0)
-    perror_and_exit("/sbin/modprobe pktgen failed", 1);
+  if(system("modprobe pktgen") != 0)
+    perror_and_exit("modprobe pktgen failed", 1);
   return 1;
 }
 
@@ -313,7 +314,7 @@ start_pktgen_traffic_generator(oflops_context *ctx) {
       printf_and_check(intf_file, buf);      
       snprintf(buf, 5000, "dst_max %s", ctx->channels[ix].det->dst_ip_max); 
       printf_and_check(intf_file, buf);    
-      snprintf(buf, 5000, "flag %s | IPDST_RND", ctx->channels[ix].det->flags);//IPDST_RND");
+      snprintf(buf, 5000, "flag IPDST_RND"); 
       printf_and_check(intf_file, buf);
 
       snprintf(buf, 5000, "vlan_id %d", ctx->channels[ix].det->vlan); 
@@ -343,9 +344,6 @@ start_pktgen_traffic_generator(oflops_context *ctx) {
       snprintf(buf, 5000, "udp_dst_max %d", ctx->channels[ix].det->udp_dst_port);
       printf_and_check(intf_file, buf);
       snprintf(buf, 5000, "udp_dst_min %d", ctx->channels[ix].det->udp_dst_port);
-      printf_and_check(intf_file, buf);
-
-      snprintf(buf, 5000, "count %llu", ctx->channels[ix].det->pkt_count);
       printf_and_check(intf_file, buf);
 
     }

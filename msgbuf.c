@@ -13,12 +13,6 @@
 #endif
 
 
-struct msgbuf
-{
-    char * buf;
-    int len, start, end;
-};
-
 
 struct msgbuf *  msgbuf_new(int bufsize)
 {
@@ -141,10 +135,4 @@ void msgbuf_push(struct msgbuf *mbuf, char * buf, int count)
         msgbuf_grow(mbuf);
     memcpy(&mbuf->buf[mbuf->end], buf, count);
     mbuf->end += count;
-}
-
-/**********************************************************************/
-int msgbuf_count_buffered(struct msgbuf * mbuf)
-{
-    return mbuf->end - mbuf->start;
 }

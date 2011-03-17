@@ -206,7 +206,7 @@ load_config_file(oflops_context * ctx, const char *config) {
   config_setting_t *elem, *data;
   char *snmp_client, *snmp_community;
   int i, len, argc = 0;
-  char *path, **argv, *in_oid = NULL, *out_oid = NULL;
+  char *path, **argv, *in_oid, *out_oid;
 
   config_init(&conf);
   if(config_read_file(&conf, config) == CONFIG_FALSE) {
@@ -281,24 +281,14 @@ load_config_file(oflops_context * ctx, const char *config) {
   
   if(((elem = config_lookup(&conf, "oflops.control.cpu_mib")) != NULL) && 
      (strlen( config_setting_get_string(elem)) > 0) ) {
-    
-    len = strlen(config_setting_get_string(elem));
-    char *data = xmalloc(len + 1);
-    strcpy(data, config_setting_get_string(elem));
-    char *end = strtok(data, ";");
-    do {
-      ctx->cpuOID_count++;
-      ctx->cpuOID_len = realloc(ctx->cpuOID_len, ctx->cpuOID_count*sizeof(int));
-      ctx->cpuOID_len[ctx->cpuOID_count - 1] = MAX_OID_LEN;
-      ctx->cpuOID = realloc(ctx->cpuOID, ctx->cpuOID_count*sizeof(oid *));
-      ctx->cpuOID[ctx->cpuOID_count - 1] = xmalloc(MAX_OID_LEN*sizeof(oid));
-      if(!my_read_objid(end, 
-			ctx->cpuOID[ctx->cpuOID_count - 1], 
-			&ctx->cpuOID_len[ctx->cpuOID_count - 1])) 
-	perror_and_exit("read_objid failed", 1);  
-    } while (( end = strtok(NULL, ";")) != NULL);
-  }
+    out_oid = malloc(strlen(config_setting_get_string(elem)) + 1);
+    strcpy(out_oid,config_setting_get_string(elem));
 
+    if(!my_read_objid(out_oid, ctx->cpuOID, &ctx->cpuOID_len)) 
+      //    if(snmp_parse_oid(out_oid, ctx->cpuOID, &ctx->cpuOID_len) == NULL)
+      perror_and_exit("read_objid failed", 1);  
+  } 
+  
   //setting up details regarding the data ports from the data 
   if((data = config_lookup(&conf, "oflops.data") ) != NULL ) {
     for (i=0; i < config_setting_length(data); i++) {
@@ -346,14 +336,14 @@ load_config_file(oflops_context * ctx, const char *config) {
 	path = config_setting_get_string(config_setting_get_member(elem, "path"));
 	argc++;
 	len = strlen(path);
-	argv = malloc(sizeof(char *));
-	argv[0] = malloc((len + 1)*sizeof(char));
+	argv = malloc(1);
+	argv[0] = malloc(len + 1);
 	strcpy(argv[0], path);
 	if(config_setting_get_member(elem, "param") != NULL)  {
 	  path = config_setting_get_string(config_setting_get_member(elem, "param"));
-	  argv = realloc(argv, 2*sizeof(char *));
+	  argv = realloc(argv, 2);
 	  argc++; //[len] = ' ';
-	  argv[1] = malloc((strlen(path) + 1)*sizeof(char));
+	  argv[1] = malloc(strlen(path) + 1);
 	  strcpy(argv[1], path);
 	}
 

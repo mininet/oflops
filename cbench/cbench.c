@@ -33,18 +33,20 @@ struct myargs my_options[] = {
     {"debug",       'd', "enable debugging", MYARGS_FLAG, {.flag = 0}},
     {"help",        'h', "print this message", MYARGS_NONE, {.none = 0}},
     {"loops",       'l', "loops per test",   MYARGS_INTEGER, {.integer = 16}},
+    {"mac-addresses", 'M', "unique source MAC addresses per switch", MYARGS_INTEGER, {.integer = 100000}},
     {"ms-per-test", 'm', "test length in ms", MYARGS_INTEGER, {.integer = 1000}},
     {"port",        'p', "controller port",  MYARGS_INTEGER, {.integer = OFP_TCP_PORT}},
     {"ranged-test", 'r', "test range of 1..$n switches", MYARGS_FLAG, {.flag = 0}},
     {"switches",    's', "fake $n switches", MYARGS_INTEGER, {.integer = 16}},
     {"throughput",  't', "test throughput instead of latency", MYARGS_NONE, {.none = 0}},
-    {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 0}},
+    {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 1}},
     {"cooldown",  'C', "loops to be disregarded at test end (cooldown)", MYARGS_INTEGER, {.integer = 0}},
+    {"delay",  'D', "delay starting testing after features_reply is received (in ms)", MYARGS_INTEGER, {.integer = 0}},
     {0, 0, 0, 0}
 };
 
 /*******************************************************************/
-double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen)
+double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstestlen, int delay)
 {
     struct timeval now, then, diff;
     struct  pollfd  * pollfds;
@@ -53,6 +55,8 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
     double passed;
     int count;
 
+    int total_wait = mstestlen + delay;
+
     pollfds = malloc(n_fakeswitches * sizeof(struct pollfd));
     assert(pollfds);
     gettimeofday(&then,NULL);
@@ -60,7 +64,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
     {
         gettimeofday(&now, NULL);
         timersub(&now, &then, &diff);
-        if( (1000* diff.tv_sec  + (float)diff.tv_usec/1000)> mstestlen)
+        if( (1000* diff.tv_sec  + (float)diff.tv_usec/1000)> total_wait)
             break;
         for(i = 0; i< n_fakeswitches; i++)
             fakeswitch_set_pollfd(&fakeswitches[i], &pollfds[i]);
@@ -71,6 +75,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
             fakeswitch_handle_io(&fakeswitches[i], &pollfds[i]);
     }
     printf("%-3d switches: fmods/sec:  ", n_fakeswitches);
+    usleep(100000); // sleep for 100 ms, to let packets queue
     for( i = 0 ; i < n_fakeswitches; i++)
     {
         count = fakeswitch_get_count(&fakeswitches[i]);
@@ -78,6 +83,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
         sum += count;
     }
     passed = 1000 * diff.tv_sec + (double)diff.tv_usec/1000;   
+    passed -= delay;        // don't count the time we intentionally delayed
     sum /= passed;  // is now per ms
     printf(" total = %lf per ms \n", sum);
     free(pollfds);
@@ -162,7 +168,8 @@ int timeout_connect(int fd, const char * hostname, int port, int mstimeout) {
 }
 
 /********************************************************************************/
-int make_tcp_connection_from_port(const char * hostname, unsigned short port,unsigned short sport,int mstimeout)
+int make_tcp_connection_from_port(const char * hostname, unsigned short port, unsigned short sport,
+        int mstimeout, int nodelay)
 {
     struct sockaddr_in local;
     int s;
@@ -174,7 +181,7 @@ int make_tcp_connection_from_port(const char * hostname, unsigned short port,uns
         perror("make_tcp_connection: socket");
         exit(1);  // bad socket
     }
-    if(setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &zero, sizeof(zero)) < 0)
+    if(nodelay && (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &zero, sizeof(zero)) < 0))
     {
         perror("setsockopt");
         fprintf(stderr,"make_tcp_connection::Unable to disable Nagle's algorithm\n");
@@ -203,9 +210,9 @@ int make_tcp_connection_from_port(const char * hostname, unsigned short port,uns
 }
 
 /********************************************************************************/
-int make_tcp_connection(const char * hostname, unsigned short port,int mstimeout)
+int make_tcp_connection(const char * hostname, unsigned short port, int mstimeout, int nodelay)
 {
-    return make_tcp_connection_from_port(hostname,port,INADDR_ANY,mstimeout);
+    return make_tcp_connection_from_port(hostname,port, INADDR_ANY, mstimeout, nodelay);
 }
 
 /********************************************************************************/
@@ -231,12 +238,14 @@ int main(int argc, char * argv[])
     char *  controller_hostname = myargs_get_default_string(my_options,"controller");
     int     controller_port      = myargs_get_default_integer(my_options, "port");
     int     n_fakeswitches= myargs_get_default_integer(my_options, "switches");
+    int     total_mac_addresses = myargs_get_default_integer(my_options, "mac-addresses");
     int     mstestlen = myargs_get_default_integer(my_options, "ms-per-test");
     int     should_test_range=myargs_get_default_flag(my_options, "ranged-test");
     int     tests_per_loop = myargs_get_default_integer(my_options, "loops");
     int     debug = myargs_get_default_flag(my_options, "debug");
     int     warmup = myargs_get_default_integer(my_options, "warmup");
     int     cooldown = myargs_get_default_integer(my_options, "cooldown");
+    int     delay = myargs_get_default_integer(my_options, "delay");
     int     mode = MODE_LATENCY;
     int     i,j;
 
@@ -265,6 +274,9 @@ int main(int argc, char * argv[])
             case 'l': 
                 tests_per_loop = atoi(optarg);
                 break;
+            case 'M':
+                total_mac_addresses = atoi(optarg);
+                break;
             case 'm': 
                 mstestlen = atoi(optarg);
                 break;
@@ -286,6 +298,9 @@ int main(int argc, char * argv[])
             case 'C': 
                 cooldown = atoi(optarg);
                 break;
+            case 'D':
+                delay = atoi(optarg);
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
@@ -296,15 +311,23 @@ int main(int argc, char * argv[])
 	}
 
     fprintf(stderr, "cbench: controller benchmarking tool\n"
+                "   running in mode %s\n"
                 "   connecting to controller at %s:%d \n"
                 "   faking%s %d switches :: %d tests each; %d ms per test\n"
+                "   with %d unique source MACs per switch\n"
+                "   starting test with %d ms delay after features_reply\n"
+                "   ignoring first %d \"warmup\" and last %d \"cooldown\" loops\n"
                 "   debugging info is %s\n",
+                mode == MODE_THROUGHPUT? "'throughput'": "'latency'",
                 controller_hostname,
                 controller_port,
                 should_test_range ? " from 1 to": "",
                 n_fakeswitches,
                 tests_per_loop,
                 mstestlen,
+                total_mac_addresses,
+                delay,
+                warmup,cooldown,
                 debug == 1 ? "on" : "off");
     /* done parsing args */
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
@@ -320,7 +343,7 @@ int main(int argc, char * argv[])
     {
         int sock;
         double sum = 0;
-        sock = make_tcp_connection(controller_hostname, controller_port,3000);
+        sock = make_tcp_connection(controller_hostname, controller_port,3000, mode!=MODE_THROUGHPUT );
         if(sock < 0 )
         {
             fprintf(stderr, "make_nonblock_tcp_connection :: returned %d", sock);
@@ -329,7 +352,7 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr,"Initializing switch %d ... ", i+1);
         fflush(stderr);
-        fakeswitch_init(&fakeswitches[i],sock,65536, debug, mode);
+        fakeswitch_init(&fakeswitches[i],sock,65536, debug, delay, mode, total_mac_addresses);
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);
@@ -338,7 +361,9 @@ int main(int argc, char * argv[])
         if(!should_test_range && ((i+1) != n_fakeswitches)) // only if testing range or this is last
             continue;
         for( j = 0; j < tests_per_loop; j ++) {
-            v = 1000.0 * run_test(i+1, fakeswitches,mstestlen);
+            if ( j > 0 )
+                delay = 0;      // only delay on the first run
+            v = 1000.0 * run_test(i+1, fakeswitches, mstestlen, delay);
             results[j] = v;
 			if(j<warmup || j >= tests_per_loop-cooldown) 
 				continue;

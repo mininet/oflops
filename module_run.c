@@ -64,8 +64,6 @@ int run_test_module(oflops_context *ctx, int ix_mod)
   test_module_loop(ctx,mod);
   mod->destroy(ctx);
 
-
-  printf("Tearing down snmp \n");
   //Teardown
   teardown_snmp_channel(ctx);
 
@@ -318,13 +316,8 @@ static void process_pcap_event(oflops_context *ctx, test_module * mod, struct po
   // read the next packet from the appropriate pcap socket
   assert(ctx->channels[ch].pcap_handle);
   count = pcap_dispatch(ctx->channels[ch].pcap_handle, 1, oflops_pcap_handler, (u_char *) & wrap);
-
-  //dump packet if required
-  if((ch == OFLOPS_CONTROL) && (ctx->channels[ch].pcap_handle) 
-     && (ctx->dump_controller)) {
+  if((ch == OFLOPS_CONTROL) && (ctx->dump_controller)) 
     pcap_dump((u_char *)ctx->channels[ch].dump, &wrap.pe->pcaphdr, wrap.pe->data);
-  }
-
   if (count == 0)
     return;
   if (count < 0)

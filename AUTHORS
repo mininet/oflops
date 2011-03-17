@@ -1,4 +1,10 @@
-Rob Sherwood    <rob.sherwood@stanford.edu>
-KK Yap          <yapkke@stanford.edu>
-Xin Huang       <xin.huang@telekom.com>
-Charalampos Rotsos <cr409@cl.cam.ac.uk>
+git log | grep Author: | sort  | uniq -c | sort -rn
+     91 Author: Rob Sherwood <rob.sherwood@stanford.edu>
+     20 Author: KK Yap <ykk@kkpc.Stanford.EDU>
+     10 Author: Nadi Sarrar <nadi@net.t-labs.tu-berlin.de>
+      5 Author: KK <yapkke@unhygienix.labs-exit.net>
+      4 Author: David Erickson <derickso@stanford.edu>
+      2 Author: Glen Gibb <grg@stanford.edu>
+      2 Author: Andreas Wundsam <andi@net.t-labs.tu-berlin.de>
+      1 Author: Xin Huang <xin.huang@telekom.com>
+      1 Author: Amin Tootoonchian <amin@cs.toronto.edu>

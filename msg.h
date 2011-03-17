@@ -72,15 +72,9 @@ int make_ofp_flow_modify(void **buferp, struct flow *fl,
 			 char *actions,  uint16_t action_len, uint32_t buffer_id, 
 			 uint16_t idle_timeout);
 
-int make_ofp_flow_modify_output_port(void **buferp, struct flow *fl, 
-				     uint32_t out_port, uint32_t buffer_id, 
-				     uint16_t idle_timeout);
-
 int make_ofp_flow_del(void **buferp);
 int make_ofp_flow_get_stat(void **buferp, int xid);
 int make_ofp_port_get_stat(void **buferp);
-int make_ofp_aggr_flow_stats(void **buferp, int trans_id);
-int make_ofp_echo_req(void **buferp);
 
 int append_data_to_flow(const  void *b, struct pcap_pkthdr hdr);
 int contains_next_msg(int dir);

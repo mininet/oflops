@@ -19,9 +19,6 @@
 #include <netinet/tcp.h>
 #include <netinet/ip_icmp.h>
 
-#include <net/if.h>  
-#include <sys/ioctl.h>
-
 #include <sys/time.h>
 
 #include "utils.h"
@@ -71,19 +68,9 @@ add_time(struct timeval *now, time_t secs,  suseconds_t usecs) {
   }
 }
 
-inline uint32_t
+inline int
 time_diff(struct timeval *now, struct timeval *then) {
   return (then->tv_sec - now->tv_sec)*1000000 + (then->tv_usec - now->tv_usec);
-}
-
-inline int
-time_cmp(struct timeval *now, struct timeval *then) {
-  if(then->tv_sec != now->tv_sec) {
-    return (then->tv_sec < now->tv_sec)?-1:1;
-  } else if (then->tv_usec != now->tv_usec) {
-    return (then->tv_usec < now->tv_usec)?-1:1;
-  } else 
-    return 0;
 }
 
 void*
@@ -137,27 +124,4 @@ uint16_t ip_sum_calc(uint16_t len_ip_header, uint16_t buff[]) {
   sum = ~sum;
   
   return ((uint16_t) sum);
-}
-
-int
-get_mac_address(char *intf_name, char *mac_addr) {    
-  struct ifreq ifr;
-  int s;
-
-  s = socket(AF_INET, SOCK_DGRAM, 0);
-  if (s==-1) {
-    return -1;
-  }
-
-  memset(&ifr, 0x00, sizeof(ifr));
-  
-  strcpy(ifr.ifr_name, intf_name);
-  if(ioctl(s, SIOCGIFHWADDR, &ifr) != 0) {
-    perror_and_exit("ioctl", 1);
-  }
-
-  close(s);
-  
-  memcpy(mac_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN * sizeof(char)); 
-  return 0;
 }

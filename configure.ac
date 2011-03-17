@@ -101,11 +101,6 @@ AC_EGREP_HEADER(OFPT_FLOW_EXPIRED, [$OPENFLOWSRC/include/openflow/openflow.h],
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 
-#check for support for gsl
-AC_CHECK_LIB([m],[cos])
-AC_CHECK_LIB([gslcblas],[cblas_dgemm])
-AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
-
 # Checks for library functions.
 AC_CHECK_FUNCS([strerror])
 
@@ -115,17 +110,12 @@ AC_CONFIG_FILES([Makefile \
 		cbench/Makefile \
 		example_modules/Makefile \
 		example_modules/oflops_debug/Makefile \
-                example_modules/openflow_action_scalability/Makefile \
-                example_modules/openflow_action_delay/Makefile \
-		example_modules/openflow_add_flow/Makefile \
-		example_modules/openflow_mod_flow/Makefile \
+                example_modules/openflow_action_install/Makefile \
+                example_modules/openflow_action_measurement/Makefile \
                 example_modules/openflow_path_delay/Makefile \
-                example_modules/openflow_flow_stats/Makefile \
-                example_modules/openflow_aggr_flow_stats/Makefile \
+                example_modules/openflow_flow_dump_test/Makefile \
                 example_modules/openflow_packet_in/Makefile \
-                example_modules/openflow_packet_out/Makefile \
                 example_modules/openflow_port_status/Makefile \
-                example_modules/snmp_queue_delay/Makefile \
                 example_modules/snmp_cpu/Makefile
 
 

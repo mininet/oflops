@@ -21,6 +21,11 @@ struct fakeswitch
                                         // if mode=THROUGHPUT, this is the number of outstanding probes
     int count;                          // number of response's received
     int ready_to_send;                  // are we ready to start sending packet_in's?
+    int probe_size;                     // how big is the probe (for buffer tuning)
+    int delay;                          // delay in ms after features_reply before test
+    struct timeval  delay_start;
+    int total_mac_addresses;
+    int current_mac_address;
 };
 
 /*** Initialize an already allocated fakeswitch
@@ -32,8 +37,10 @@ struct fakeswitch
  *                          the controller (will be non-blocking on return)
  * @param bufsize   The initial in and out buffer size
  * @param mode      Should we test throughput or latency?
+ * @param total_mac_addresses      The total number of unique mac addresses
+ *                                 to use for packet ins from this switch
  */
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, enum test_mode mode);
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses);
 
 
 /*** Set the desired flags for poll()
