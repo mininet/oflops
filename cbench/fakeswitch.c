@@ -20,9 +20,21 @@
 
 static int debug_msg(struct fakeswitch * fs, char * msg, ...);
 static int make_features_reply(int switch_id, int xid, char * buf, int buflen);
+static int parse_set_config(struct ofp_header * msg);
+static int make_config_reply( int xid, char * buf, int buflen);
 static int make_vendor_reply(int xid, char * buf, int buflen);
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen, int mac_address);
+static int packet_out_is_lldp(struct ofp_packet_out * po);
 static void fakeswitch_handle_write(struct fakeswitch *fs);
+
+static struct ofp_switch_config Switch_config = {
+	.header = { 	OFP_VERSION,
+			OFPT_GET_CONFIG_REPLY,
+			sizeof(struct ofp_switch_config),
+			0},
+	.flags = 0,
+	.miss_send_len = 0,
+};
 
 static inline uint64_t htonll(uint64_t n)
 {
@@ -96,6 +108,28 @@ int fakeswitch_get_count(struct fakeswitch *fs)
         }
     }
     return ret;
+}
+
+/***********************************************************************/
+static int parse_set_config(struct ofp_header * msg) {
+	struct ofp_switch_config * sc; 
+	assert(msg->type == OFPT_SET_CONFIG);
+	sc = (struct ofp_switch_config *) msg;
+	memcpy(&Switch_config, sc, sizeof(struct ofp_switch_config));
+
+	return 0;
+}
+
+
+/***********************************************************************/
+static int make_config_reply( int xid, char * buf, int buflen) {
+	int len = sizeof(struct ofp_switch_config);
+	assert(buflen >= len);
+	Switch_config.header.type = OFPT_GET_CONFIG_REPLY;
+	Switch_config.header.xid = xid;
+	memcpy(buf, &Switch_config, len);
+
+	return len;
 }
 
 /***********************************************************************/
@@ -258,7 +292,20 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 break;
             case OFPT_SET_CONFIG:
                 // pull msgs out of buffer
-                debug_msg(fs, "got config");
+                debug_msg(fs, "parsing set_config");
+		parse_set_config(ofph);
+                break;
+            case OFPT_GET_CONFIG_REQUEST:
+                // pull msgs out of buffer
+                debug_msg(fs, "got get_config_request");
+                count = make_config_reply(ofph->xid, buf, BUFLEN);
+                msgbuf_push(fs->outbuf, buf, count);
+		if ((fs->mode == MODE_LATENCY)  && ( fs->probe_state == 1 )) {     
+		    fs->probe_state = 0;       // restart probe state b/c some 
+					       // controllers block on config
+                	debug_msg(fs, "reset probe state b/c of get_config_reply");
+		}
+                debug_msg(fs, "sent get_config_reply");
                 break;
             case OFPT_VENDOR:
                 // pull msgs out of buffer
