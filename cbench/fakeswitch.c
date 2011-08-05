@@ -143,6 +143,28 @@ static int make_vendor_reply(int xid, char * buf, int buflen)
     e->code = htons(OFPBRC_BAD_VENDOR);
     return sizeof(struct ofp_error_msg);
 }
+/***********************************************************************
+ *  return 1 if the embedded packet in the packet_out is lldp
+ * 
+ */
+
+#ifndef ETHERTYPE_LLDP
+#define ETHERTYPE_LLDP 0x88cc
+#endif
+
+static int packet_out_is_lldp(struct ofp_packet_out * po){
+	char * ptr = (char *) po;
+	ptr += sizeof(struct ofp_packet_out) + ntohs(po->actions_len);
+	struct ether_header * ethernet = (struct ether_header *) ptr;
+	unsigned short ethertype = ntohs(ethernet->ether_type);
+	if (ethertype == ETHERTYPE_VLAN) {
+		ethernet = (struct ether_header *) ((char *) ethernet) +4;
+		ethertype = ntohs(ethernet->ether_type);
+	}
+	
+	return ethertype == ETHERTYPE_LLDP;
+}
+
 /***********************************************************************/
 static int make_packet_in(int switch_id, int buffer_id, char * buf, int buflen, int mac_address)
 {
@@ -201,9 +223,11 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
             struct ofp_packet_out *po;
             case OFPT_PACKET_OUT:
                 po = (struct ofp_packet_out *) ofph;
-                // assume this is in response to what we sent
-                fs->count++;        // got response to what we went
-                fs->probe_state--;
+		if ( ! packet_out_is_lldp(po)) { 
+			// assume this is in response to what we sent
+			fs->count++;        // got response to what we went
+			fs->probe_state--;
+		}
                 break;
             case OFPT_FLOW_MOD:
                 fm = (struct ofp_flow_mod *) ofph;
