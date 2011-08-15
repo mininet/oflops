@@ -10,7 +10,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <error.h>
 
 #include <netinet/tcp.h>
 
@@ -307,7 +306,8 @@ int main(int argc, char * argv[])
     }
 
 	if(warmup+cooldown >=  tests_per_loop) {
-		error(10, 0, "Error warmup(%d) + cooldown(%d) >= number of tests (%d)", warmup, cooldown, tests_per_loop);
+		fprintf(stderr, "Error warmup(%d) + cooldown(%d) >= number of tests (%d)", warmup, cooldown, tests_per_loop);
+		exit(1);
 	}
 
     fprintf(stderr, "cbench: controller benchmarking tool\n"
