@@ -306,7 +306,7 @@ int main(int argc, char * argv[])
     }
 
 	if(warmup+cooldown >=  tests_per_loop) {
-		fprintf(stderr, "Error warmup(%d) + cooldown(%d) >= number of tests (%d)", warmup, cooldown, tests_per_loop);
+		fprintf(stderr, "Error warmup(%d) + cooldown(%d) >= number of tests (%d)\n", warmup, cooldown, tests_per_loop);
 		exit(1);
 	}
 
