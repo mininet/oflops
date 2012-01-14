@@ -15,11 +15,13 @@
 
 #include <netinet/in.h>
 
+#include "config.h"
 #include "cbench.h"
 #include "fakeswitch.h"
 
 static int debug_msg(struct fakeswitch * fs, char * msg, ...);
 static int make_features_reply(int switch_id, int xid, char * buf, int buflen);
+static int make_stats_desc_reply(struct ofp_stats_request * req, char * buf, int buflen);
 static int parse_set_config(struct ofp_header * msg);
 static int make_config_reply( int xid, char * buf, int buflen);
 static int make_vendor_reply(int xid, char * buf, int buflen);
@@ -164,6 +166,31 @@ static int              make_features_reply(int id, int xid, char * buf, int buf
     return sizeof(fake);
 }
 /***********************************************************************/
+static int      make_stats_desc_reply(struct ofp_stats_request * req, 
+        char * buf, int buflen) {
+    static struct ofp_desc_stats cbench_desc = { 
+        .mfr_desc = "Cbench - controller I/O benchmark",
+        .hw_desc  = "this is actually software...",
+        .sw_desc  = "version " VERSION,
+        .serial_num= "none",
+        .dp_desc  = "none"
+    };
+    struct ofp_stats_reply * reply;
+    int len = sizeof(struct ofp_stats_reply) + 
+                sizeof(struct ofp_desc_stats);
+    assert(BUFLEN > len);
+    assert(ntohs(req->type) == OFPST_DESC);
+
+    memcpy( buf, req, sizeof(*req));
+    reply = (struct ofp_stats_reply *) buf;
+    reply->header.type = OFPT_STATS_REPLY;
+    reply->header.length = htons(len);
+    reply->flags = 0;
+    memcpy(reply->body, &cbench_desc, sizeof(cbench_desc));
+
+    return len;
+}
+/***********************************************************************/
 static int make_vendor_reply(int xid, char * buf, int buflen)
 {
     struct ofp_error_msg * e;
@@ -255,6 +282,7 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
         {
             struct ofp_flow_mod * fm;
             struct ofp_packet_out *po;
+            struct ofp_stats_request * stats_req;
             case OFPT_PACKET_OUT:
                 po = (struct ofp_packet_out *) ofph;
 		if ( ! packet_out_is_lldp(po)) { 
@@ -329,7 +357,19 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 msgbuf_push(fs->outbuf,(char *) &echo, sizeof(echo));
                 break;
             case OFPT_STATS_REQUEST:
-                debug_msg(fs, "Silently ignoring stats_request msg\n");
+                stats_req  = (struct ofp_stats_request *) ofph;
+                if ( ntohs(stats_req->type) == OFPST_DESC ) {
+                    count = make_stats_desc_reply(stats_req, buf, BUFLEN);
+                    msgbuf_push(fs->outbuf, buf, count);
+                    debug_msg(fs, "sent description stats_reply");
+                    if ((fs->mode == MODE_LATENCY)  && ( fs->probe_state == 1 )) {     
+                        fs->probe_state = 0;       // restart probe state b/c some 
+                                       // controllers block on config
+                                debug_msg(fs, "reset probe state b/c of desc_stats_request");
+                    }
+                } else {
+                    debug_msg(fs, "Silently ignoring non-desc stats_request msg\n");
+                }
                 break;
             default: 
     //            if(fs->debug)
