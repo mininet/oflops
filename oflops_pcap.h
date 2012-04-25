@@ -7,12 +7,11 @@ struct pcap_event;
 
 #include "test_module.h"
 
-typedef struct pcap_event
-{
-	struct pcap_pkthdr pcaphdr;
-	// NOTE: full packet capture NOT guaranteed; need to check pcaphdr to see
-	// 	how much was captured
-	unsigned char * data;
+typedef struct pcap_event {
+  struct pcap_pkthdr pcaphdr;
+  // NOTE: full packet capture NOT guaranteed; need to check pcaphdr to see
+  // 	how much was captured
+  unsigned char * data;
 } pcap_event;
 
 // Silly hack to get around how pcap_dispatch() works

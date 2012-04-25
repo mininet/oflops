@@ -38,6 +38,8 @@ int wc_run_next_event(struct wc_queue *);
 int wc_queue_extract(struct wc_queue *pq , int *, struct timeval * key, void (**fun)(void *), void **arg);
 
 
+void *event_loop(void *param);
+
 /******************
  * Don't use... slow on planetlab
 /// SIGALRM style

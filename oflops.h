@@ -43,6 +43,9 @@
 #include "context.h"
 #include "test_module.h"
 
-
+struct run_module_param {
+  struct oflops_context *ctx;
+  int ix_mod;  
+};
 
 #endif

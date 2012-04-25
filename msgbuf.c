@@ -102,6 +102,10 @@ void msgbuf_grow(struct msgbuf * mbuf)
 {
     mbuf->len *=2 ;
     mbuf->buf = realloc(mbuf->buf, mbuf->len);
+    if(mbuf->buf == NULL) {
+      perror("msgbuf_grow failed");
+      printf("buffer len: %d\n", mbuf->len);
+    }
     assert(mbuf->buf);
 }
 /**********************************************************************/

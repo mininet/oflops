@@ -11,10 +11,10 @@ int timer_get_next_event(struct oflops_context *ctx)
 	ret=wc_get_next_event_delta(ctx->timers, &tv);
 	if(ret == 0)
 	{
-		return tv.tv_sec * 1000 + tv.tv_usec/1000;	// next event
+	  return tv.tv_sec * 1000000 + tv.tv_usec;	// next event
 	}
 	else if(ret == -1)
-		return 1000;		// no events; just say 1 sec
+		return 1000000;		// no events; just say 1 sec
 	else 
 		return -1;		// next event timer already passed... 
 }
