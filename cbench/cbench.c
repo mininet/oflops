@@ -41,6 +41,8 @@ struct myargs my_options[] = {
     {"warmup",  'w', "loops to be disregarded on test start (warmup)", MYARGS_INTEGER, {.integer = 1}},
     {"cooldown",  'C', "loops to be disregarded at test end (cooldown)", MYARGS_INTEGER, {.integer = 0}},
     {"delay",  'D', "delay starting testing after features_reply is received (in ms)", MYARGS_INTEGER, {.integer = 0}},
+    {"connect-delay",  'i', "delay between groups of switches connecting to the controller (in ms)", MYARGS_INTEGER, {.integer = 0}},
+    {"connect-group-size",  'I', "number of switches in a connection delay group", MYARGS_INTEGER, {.integer = 1}},
     {0, 0, 0, 0}
 };
 
@@ -248,6 +250,8 @@ int main(int argc, char * argv[])
     int     warmup = myargs_get_default_integer(my_options, "warmup");
     int     cooldown = myargs_get_default_integer(my_options, "cooldown");
     int     delay = myargs_get_default_integer(my_options, "delay");
+    int     connect_delay = myargs_get_default_integer(my_options, "connect-delay");
+    int     connect_group_size = myargs_get_default_integer(my_options, "connect-group-size");
     int     mode = MODE_LATENCY;
     int     i,j;
 
@@ -303,6 +307,12 @@ int main(int argc, char * argv[])
             case 'D':
                 delay = atoi(optarg);
                 break;
+            case 'i':
+                connect_delay = atoi(optarg);
+                break;
+            case 'I':
+                connect_group_size = atoi(optarg);
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
@@ -320,6 +330,7 @@ int main(int argc, char * argv[])
                 "   with %d unique source MACs per switch\n"
                 "   starting test with %d ms delay after features_reply\n"
                 "   ignoring first %d \"warmup\" and last %d \"cooldown\" loops\n"
+                "   connection delay of %dms per %d switch(es)\n"
                 "   debugging info is %s\n",
                 mode == MODE_THROUGHPUT? "'throughput'": "'latency'",
                 controller_hostname,
@@ -331,6 +342,7 @@ int main(int argc, char * argv[])
                 total_mac_addresses,
                 delay,
                 warmup,cooldown,
+                connect_delay,connect_group_size,
                 debug == 1 ? "on" : "off");
     /* done parsing args */
     fakeswitches = malloc(n_fakeswitches * sizeof(struct fakeswitch));
@@ -346,6 +358,11 @@ int main(int argc, char * argv[])
     {
         int sock;
         double sum = 0;
+        if (connect_delay != 0 && i != 0 && (i % connect_group_size == 0)) {
+            if(debug)
+                fprintf(stderr,"Delaying connection by %dms...", connect_delay*1000);
+            usleep(connect_delay*1000);
+        }
         sock = make_tcp_connection(controller_hostname, controller_port,3000, mode!=MODE_THROUGHPUT );
         if(sock < 0 )
         {
