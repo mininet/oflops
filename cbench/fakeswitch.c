@@ -261,6 +261,7 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
     int count;
     struct ofp_header * ofph;
     struct ofp_header echo;
+    struct ofp_header barrier;
     char buf[BUFLEN];
     count = msgbuf_read(fs->inbuf, fs->sock);   // read any queued data
     if (count <= 0)
@@ -356,6 +357,14 @@ void fakeswitch_handle_read(struct fakeswitch *fs)
                 echo.type   = OFPT_ECHO_REPLY;
                 echo.xid = ofph->xid;
                 msgbuf_push(fs->outbuf,(char *) &echo, sizeof(echo));
+                break;
+            case OFPT_BARRIER_REQUEST:
+                debug_msg(fs, "got barrier, sent barrier_resp");
+                barrier.version= OFP_VERSION;
+                barrier.length = htons(sizeof(barrier));
+                barrier.type   = OFPT_BARRIER_REPLY;
+                barrier.xid = ofph->xid;
+                msgbuf_push(fs->outbuf,(char *) &barrier, sizeof(barrier));
                 break;
             case OFPT_STATS_REQUEST:
                 stats_req  = (struct ofp_stats_request *) ofph;
