@@ -68,10 +68,12 @@ myargs_to_long(struct myargs options[])
             longopts[i].name = strdup(options[i].name);
         else 
             longopts[i].name = NULL;
-        if( options[i].type == MYARGS_NONE || options[i].type == MYARGS_FLAG)
-            longopts[i].has_arg = 0;
+        if( options[i].type == MYARGS_NONE ) 
+            longopts[i].has_arg = no_argument;
+        else if ( options[i].type == MYARGS_FLAG)
+            longopts[i].has_arg = optional_argument;
         else
-            longopts[i].has_arg = 1;
+            longopts[i].has_arg = required_argument;
         longopts[i].flag =  NULL;
         longopts[i].val  = options[i].shortname;
     }

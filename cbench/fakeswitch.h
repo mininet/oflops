@@ -5,11 +5,20 @@
 
 #include "msgbuf.h"
 
+#define NUM_BUFFER_IDS 100000
+
 enum test_mode 
 {
     MODE_LATENCY, MODE_THROUGHPUT
 };
 
+enum handshake_status {
+    START = 0,
+    LEARN_DSTMAC = 2,
+    READY_TO_SEND = 99,
+    WAITING = 101
+};
+    
 struct fakeswitch 
 {
     int id;                             // switch number
@@ -20,12 +29,16 @@ struct fakeswitch
     int probe_state;                    // if mode=LATENCY, this is a flag: do we have a packet outstanding?
                                         // if mode=THROUGHPUT, this is the number of outstanding probes
     int count;                          // number of response's received
-    int ready_to_send;                  // are we ready to start sending packet_in's?
+    int switch_status;                  // are we ready to start sending packet_in's?
+    int next_status;                    // if we are waiting, next step to go after delay expires
     int probe_size;                     // how big is the probe (for buffer tuning)
-    int delay;                          // delay in ms after features_reply before test
-    struct timeval  delay_start;
+    int delay;                          // delay between state changes
+    int xid;
+    struct timeval  delay_start;        // when did the current delay start - valid if in waiting state
     int total_mac_addresses;
     int current_mac_address;
+    int learn_dstmac;
+    int current_buffer_id;
 };
 
 /*** Initialize an already allocated fakeswitch
@@ -40,7 +53,7 @@ struct fakeswitch
  * @param total_mac_addresses      The total number of unique mac addresses
  *                                 to use for packet ins from this switch
  */
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses);
+void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses, int learn_dstmac);
 
 
 /*** Set the desired flags for poll()
