@@ -79,7 +79,7 @@ double run_test(int n_fakeswitches, struct fakeswitch * fakeswitches, int mstest
     }
     tNow = now.tv_sec;
     tmNow = localtime(&tNow);
-    printf("%02d:%02d:%02d.%03d %-3d switches: fmods/sec:  ", tmNow->tm_hour, tmNow->tm_min, tmNow->tm_sec, (int)(now.tv_usec/1000), n_fakeswitches);
+    printf("%02d:%02d:%02d.%03d %-3d switches: flows/sec:  ", tmNow->tm_hour, tmNow->tm_min, tmNow->tm_sec, (int)(now.tv_usec/1000), n_fakeswitches);
     usleep(100000); // sleep for 100 ms, to let packets queue
     for( i = 0 ; i < n_fakeswitches; i++)
     {
