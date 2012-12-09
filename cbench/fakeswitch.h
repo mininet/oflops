@@ -46,6 +46,7 @@ struct fakeswitch
  *  exchange OFP_HELLO, block waiting on features_request
  *  and send features reply
  * @param fs        Pointer to a fakeswitch
+ * @param dpid      DPID
  * @param sock      A non-blocking socket already connected to 
  *                          the controller (will be non-blocking on return)
  * @param bufsize   The initial in and out buffer size
@@ -53,7 +54,7 @@ struct fakeswitch
  * @param total_mac_addresses      The total number of unique mac addresses
  *                                 to use for packet ins from this switch
  */
-void fakeswitch_init(struct fakeswitch *fs, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses, int learn_dstmac);
+void fakeswitch_init(struct fakeswitch *fs, int dpid, int sock, int bufsize, int debug, int delay, enum test_mode mode, int total_mac_addresses, int learn_dstmac);
 
 
 /*** Set the desired flags for poll()

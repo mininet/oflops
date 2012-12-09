@@ -44,6 +44,7 @@ struct myargs my_options[] = {
     {"connect-delay",  'i', "delay between groups of switches connecting to the controller (in ms)", MYARGS_INTEGER, {.integer = 0}},
     {"connect-group-size",  'I', "number of switches in a connection delay group", MYARGS_INTEGER, {.integer = 1}},
     {"learn-dst-macs",  'L', "send gratuitious ARP replies to learn destination macs before testing", MYARGS_FLAG, {.flag = 1}},
+    {"dpid-offset",  'o', "switch DPID offset", MYARGS_INTEGER, {.integer = 1}},
     {0, 0, 0, 0}
 };
 
@@ -254,6 +255,7 @@ int main(int argc, char * argv[])
     int     connect_delay = myargs_get_default_integer(my_options, "connect-delay");
     int     connect_group_size = myargs_get_default_integer(my_options, "connect-group-size");
     int     learn_dst_macs = myargs_get_default_flag(my_options, "learn-dst-macs");
+    int     dpid_offset = myargs_get_default_integer(my_options, "dpid-offset");
     int     mode = MODE_LATENCY;
     int     i,j;
 
@@ -321,6 +323,9 @@ int main(int argc, char * argv[])
             case 'I':
                 connect_group_size = atoi(optarg);
                 break;
+            case 'o':
+                dpid_offset = atoi(optarg);
+                break;
             default: 
                 myargs_usage(my_options, PROG_TITLE, "help message", NULL, 1);
         }
@@ -334,7 +339,7 @@ int main(int argc, char * argv[])
     fprintf(stderr, "cbench: controller benchmarking tool\n"
                 "   running in mode %s\n"
                 "   connecting to controller at %s:%d \n"
-                "   faking%s %d switches :: %d tests each; %d ms per test\n"
+                "   faking%s %d switches offset %d :: %d tests each; %d ms per test\n"
                 "   with %d unique source MACs per switch\n"
                 "   %s destination mac addresses before the test\n"
                 "   starting test with %d ms delay after features_reply\n"
@@ -346,6 +351,7 @@ int main(int argc, char * argv[])
                 controller_port,
                 should_test_range ? " from 1 to": "",
                 n_fakeswitches,
+                dpid_offset,
                 tests_per_loop,
                 mstestlen,
                 total_mac_addresses,
@@ -382,7 +388,7 @@ int main(int argc, char * argv[])
         if(debug)
             fprintf(stderr,"Initializing switch %d ... ", i+1);
         fflush(stderr);
-        fakeswitch_init(&fakeswitches[i],sock,65536, debug, delay, mode, total_mac_addresses, learn_dst_macs);
+        fakeswitch_init(&fakeswitches[i],dpid_offset+i,sock,65536, debug, delay, mode, total_mac_addresses, learn_dst_macs);
         if(debug)
             fprintf(stderr," :: done.\n");
         fflush(stderr);
