@@ -479,7 +479,7 @@ static void fakeswitch_handle_write(struct fakeswitch *fs)
     char buf[BUFLEN];
     int count ;
     int send_count = 0 ;
-    int throughput_buffer = 65536;
+    int throughput_buffer = BUFLEN;
     int i;
     if( fs->switch_status == READY_TO_SEND) 
     {
