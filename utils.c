@@ -51,7 +51,7 @@ void perror_and_exit(char * str, int exit_code)
 	exit(exit_code);
 }
 
-void 
+void
 set_timeval(struct timeval *target, struct timeval *val) {
   target->tv_sec = val->tv_sec;
   target->tv_usec = val->tv_usec;
@@ -63,8 +63,8 @@ add_time(struct timeval *now, time_t secs,  suseconds_t usecs) {
   now->tv_sec += secs;
   now->tv_usec += usecs;
   if(now->tv_usec > sec_to_usec) {
-    now->tv_sec += 1; 
-    now->tv_usec -= sec_to_usec; 
+    now->tv_sec += 1;
+    now->tv_usec -= sec_to_usec;
   }
 }
 
@@ -82,7 +82,7 @@ xmalloc(size_t len) {
   return p;
 }
 
-void 
+void
 fail(const char * msg) {
   printf("error: %s\n", msg);
   exit(1);
@@ -91,12 +91,12 @@ fail(const char * msg) {
 uint64_t
 ntohll(uint64_t val) {
   uint64_t ret = 0;
-    
+
   ret=((val & 0x00000000000000FF) << 56) |
     ((val & 0x000000000000FF00) << 40) |
     ((val & 0x0000000000FF0000) << 24) |
     ((val & 0x00000000FF000000) << 8)  |
-    ((val & 0x000000FF00000000) >> 8)  | 
+    ((val & 0x000000FF00000000) >> 8)  |
     ((val & 0x0000FF0000000000) >> 24) |
     ((val & 0x00FF000000000000) >> 40) |
     ((val & 0xFF00000000000000) >> 56);
@@ -108,20 +108,20 @@ uint16_t ip_sum_calc(uint16_t len_ip_header, uint16_t buff[]) {
   uint16_t word16;
   uint32_t sum=0;
   uint16_t i;
-  
+
   // make 16 bit words out of every two adjacent 8 bit words in the packet
   // and add them up
   for (i=0;i<len_ip_header;i=i+2){
     word16 =((buff[i]<<8)&0xFF00)+(buff[i+1]&0xFF);
-    sum = sum + (uint32_t) word16;	
+    sum = sum + (uint32_t) word16;
   }
-  
+
   // take only 16 bits out of the 32 bit sum and add up the carries
   while (sum>>16)
     sum = (sum & 0xFFFF)+(sum >> 16);
-  
+
   // one's complement the result
   sum = ~sum;
-  
+
   return ((uint16_t) sum);
 }

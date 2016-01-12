@@ -38,7 +38,7 @@ void* xmalloc(size_t len);
 void fail(const char *msg);
 
 /**
- * Endiannes change for 64 bit numbers. 
+ * Endiannes change for 64 bit numbers.
  */
 uint64_t ntohll(uint64_t val);
 uint16_t ip_sum_calc(uint16_t len_ip_header, uint16_t buff[]);
