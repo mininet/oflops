@@ -2,8 +2,11 @@ AUTOMAKE_OPTIONS=-Wall foreign
 
 OFSRC=@openflowsrc@
 
-CFLAGS+=-Wall -I$(OFSRC)/include -Wshadow `pkg-config --cflags libconfig`
-LDFLAGS+=-L$(OFSRC)/lib `pkg-config --libs libconfig` 
+CFLAGS+=-Wall -I$(OFSRC)/include \
+	-Wshadow `pkg-config --cflags libconfig` \
+	-D_GNU_SOURCE
+
+LDFLAGS+=-L$(OFSRC)/lib `pkg-config --libs libconfig`
 
 LDADD=-ldl -lpcap -lnetsnmp -loflops_test -lpthread
 #LDADD+=-lefence
@@ -18,7 +21,7 @@ liboflops_test_la_SOURCES= test_module.h  test_module.c \
 	pcap_track.c  pcap_track.h \
 	oflops_snmp.c oflops_snmp.h \
 	utils.h utils.c \
-	wc_event.h wc_event.c 
+	wc_event.h wc_event.c
 liboflops_test_la_LIBADD=-lnetsnmp
 
 oflops_SOURCES= \
@@ -33,7 +36,7 @@ oflops_SOURCES= \
 	msg.c msg.h \
 	log.c log.h \
 	traffic_generator.c traffic_generator.h \
-	usage.h usage.c 
+	usage.h usage.c
 oflops_LDFLAGS=-static -Wl,-E
 
 
@@ -41,8 +44,8 @@ oflops_LDFLAGS=-static -Wl,-E
 #	to be built right
 SUBDIRS = . example_modules cbench doc
 
-docs: 
+docs:
 	$(MAKE) -C doc docs
 
-count: 
+count:
 	@wc -l `find . -name \*.c -o -name \*.h -o -name Makefile.am` | sort -n
